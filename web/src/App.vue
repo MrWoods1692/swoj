@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { auth, toast } from './api'
 import { i18n } from './i18n'
 import TermsGate from './components/TermsGate.vue'
+import RestReminder from './components/RestReminder.vue'
 
 const collapsed = ref(true)
 
@@ -52,6 +53,7 @@ onMounted(() => auth.me())
   </header>
   <main class="page"><router-view /></main>
   <TermsGate v-if="auth.user" />
+  <RestReminder />
   <footer class="foot">
     <router-link to="/terms">{{ i18n.t('terms') }}</router-link>
     <span> · </span>

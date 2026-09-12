@@ -64,7 +64,10 @@ func (s *Server) onlineHeartbeat(w http.ResponseWriter, r *http.Request) {
 	}
 	s.refreshAchievements(claims.UserID)
 	balance, _ := s.userPoints(claims.UserID)
-	OK(w, map[string]any{"seconds": req.Seconds, "points": gain, "balance": balance})
+	// 回传累计秒数，前端据此判断是否到达休息提醒阈值，避免客户端自行累加产生漂移。
+	var total int
+	_ = s.db.QueryRow(`SELECT online_seconds FROM online_stats WHERE user_id=?`, claims.UserID).Scan(&total)
+	OK(w, map[string]any{"seconds": req.Seconds, "points": gain, "balance": balance, "online_seconds": total})
 }
 
 // onlineSummary 返回在线累计与已发放积分。
