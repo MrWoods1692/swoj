@@ -24,9 +24,10 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var u User
-	err := s.db.QueryRow(`SELECT id, username, email, realname, role, school, avatar, signature, problem_count,
-		points, can_submit, created_at, last_login_at FROM users WHERE id=?`, claims.UserID).
+	err := s.db.QueryRow(`SELECT id, username, email, realname, role, school, avatar, signature, website, background, qq,
+		problem_count, points, can_submit, created_at, last_login_at FROM users WHERE id=?`, claims.UserID).
 		Scan(&u.ID, &u.Username, &u.Email, &u.RealName, &u.Role, &u.School, &u.Avatar, &u.Signature,
+			&u.Website, &u.Background, &u.QQ,
 			&u.ProblemCount, &u.Points, &u.CanSubmit, (*time.Time)(&u.CreatedAt), (*time.Time)(&u.LastLoginAt))
 	if err == sql.ErrNoRows {
 		Fail(w, http.StatusUnauthorized, "用户不存在")

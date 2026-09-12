@@ -340,10 +340,13 @@ func (s *Server) profileUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		RealName  *string `json:"realname"`
-		School    *string `json:"school"`
-		Avatar    *string `json:"avatar"`
-		Signature *string `json:"signature"`
+		RealName   *string `json:"realname"`
+		School     *string `json:"school"`
+		Avatar     *string `json:"avatar"`
+		Signature  *string `json:"signature"`
+		Website    *string `json:"website"`
+		Background *string `json:"background"`
+		QQ         *string `json:"qq"`
 	}
 	if err := decode(r, &req); err != nil {
 		Fail(w, http.StatusBadRequest, err.Error())
@@ -372,6 +375,33 @@ func (s *Server) profileUpdate(w http.ResponseWriter, r *http.Request) {
 	if req.Signature != nil {
 		sets = append(sets, "signature=?")
 		args = append(args, strings.TrimSpace(*req.Signature))
+	}
+	if req.Website != nil {
+		v := strings.TrimSpace(*req.Website)
+		if !validateProfileURL(v) {
+			Fail(w, http.StatusBadRequest, "个人网站需为 http/https 完整链接")
+			return
+		}
+		sets = append(sets, "website=?")
+		args = append(args, v)
+	}
+	if req.Background != nil {
+		v := strings.TrimSpace(*req.Background)
+		if !validateProfileURL(v) {
+			Fail(w, http.StatusBadRequest, "背景图需为 http/https 完整链接")
+			return
+		}
+		sets = append(sets, "background=?")
+		args = append(args, v)
+	}
+	if req.QQ != nil {
+		v := strings.TrimSpace(*req.QQ)
+		if v != "" && !qqNumber.MatchString(v) {
+			Fail(w, http.StatusBadRequest, "QQ 号需为 5-11 位数字")
+			return
+		}
+		sets = append(sets, "qq=?")
+		args = append(args, v)
 	}
 	if len(sets) == 0 {
 		Fail(w, http.StatusBadRequest, "没有需要更新的字段")

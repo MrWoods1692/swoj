@@ -202,8 +202,8 @@ func (s *Server) oauthIssue(w http.ResponseWriter, r *http.Request, username, qq
 			// 用户名已被占用：用 OAuth ID 生成不冲突的账号名，保证建号不因重名失败。
 			username = "campux_" + qq
 		}
-		res, err := s.db.Exec(`INSERT INTO users(username, oauth_provider, oauth_id, oauth_name, role, can_submit)
-			VALUES(?,?,?,?,?,0)`, username, oauthProvider, qq, username, role)
+		res, err := s.db.Exec(`INSERT INTO users(username, oauth_provider, oauth_id, oauth_name, role, qq, can_submit)
+			VALUES(?,?,?,?,?,?,0)`, username, oauthProvider, qq, username, role, qq)
 		if err != nil {
 			// 并发首次登录：按 OAuth 绑定回查，避免重复建号。
 			if err2 := s.db.QueryRow(`SELECT id, role FROM users WHERE oauth_provider=? AND oauth_id=?`,
@@ -217,9 +217,10 @@ func (s *Server) oauthIssue(w http.ResponseWriter, r *http.Request, username, qq
 	}
 
 	var u User
-	err := s.db.QueryRow(`SELECT id, username, email, realname, role, school, avatar, signature, problem_count,
-		points, level, can_submit, created_at, last_login_at FROM users WHERE id=?`, id).
+	err := s.db.QueryRow(`SELECT id, username, email, realname, role, school, avatar, signature, website, background, qq,
+		problem_count, points, level, can_submit, created_at, last_login_at FROM users WHERE id=?`, id).
 		Scan(&u.ID, &u.Username, &u.Email, &u.RealName, &u.Role, &u.School, &u.Avatar, &u.Signature,
+			&u.Website, &u.Background, &u.QQ,
 			&u.ProblemCount, &u.Points, &u.Level, &u.CanSubmit,
 			(*time.Time)(&u.CreatedAt), (*time.Time)(&u.LastLoginAt))
 	if err != nil {

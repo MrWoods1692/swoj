@@ -87,9 +87,10 @@ func requireAdminClaims(w http.ResponseWriter, r *http.Request) (*Claims, bool) 
 // userByID 按 ID 读取用户，不包含密码字段。
 func (s *Server) userByID(id int64) (User, bool) {
 	var u User
-	err := s.db.QueryRow(`SELECT id, username, email, realname, role, school, avatar, signature,
+	err := s.db.QueryRow(`SELECT id, username, email, realname, role, school, avatar, signature, website, background, qq,
 		problem_count, rank_no, can_submit, points, level FROM users WHERE id=?`, id).
 		Scan(&u.ID, &u.Username, &u.Email, &u.RealName, &u.Role, &u.School, &u.Avatar, &u.Signature,
+			&u.Website, &u.Background, &u.QQ,
 			&u.ProblemCount, &u.RankNo, &u.CanSubmit, &u.Points, &u.Level)
 	return u, err == nil
 }

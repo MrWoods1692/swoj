@@ -139,6 +139,8 @@ func NewRouter(s *Server) http.Handler {
 	// 登录态接口统一走鉴权中间件，避免公开路由误开。
 	pri("GET /api/auth/me", s.me)
 	pri("PUT /api/auth/me", s.profileUpdate)
+	// 公开个人主页：任何访客可查看，前端外链 /profile/{id} 直接渲染此数据。
+	pub("GET /api/users/{id}/homepage", s.userHomepage)
 	pub("GET /api/problems", s.problemList)
 	pub("GET /api/problems/{id}", s.problemDetail)
 	pri("POST /api/submissions", s.submit)

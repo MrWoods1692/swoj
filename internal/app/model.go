@@ -11,6 +11,9 @@ type User struct {
 	School       string    `json:"school"`
 	Avatar       string    `json:"avatar"`
 	Signature    string    `json:"signature"`
+	Website      string    `json:"website"`
+	Background   string    `json:"background"`
+	QQ           string    `json:"qq"`
 	ProblemCount int       `json:"problem_count"`
 	RankNo       int       `json:"rank_no"`
 	Points       int       `json:"points"`
