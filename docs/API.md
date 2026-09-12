@@ -95,6 +95,18 @@ pri  PUT    /api/notes/{id}                更新笔记（含 pinned 切换）
 pri  DELETE /api/notes/{id}                删除笔记（硬删除）
 ```
 
+## 学生出题（问题提议）
+
+```
+pri  POST   /api/proposals                          新建提议（pri，作者）
+pri  GET    /api/proposals                          我的提议列表（pri，作者）
+pri  GET    /api/proposals/{id}                     提议详情（pri，作者或审核员）
+pri  PUT    /api/proposals/{id}/withdraw            作者撤回（仅 pending/rejected）
+pri  DELETE /api/proposals/{id}                     作者删除（仅 withdrawn/rejected）
+pri  GET    /api/admin/proposals                    待审核列表（teacher+）
+pri  POST   /api/admin/proposals/{id}/review        审核：通过/拒绝 + 奖励积分（teacher+）
+```
+
 ## 积分 / 签到 / 在线
 
 ```

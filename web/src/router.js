@@ -17,6 +17,7 @@ const routes = [
   { path: '/discussions/:id', name: 'discussion', component: () => import('./views/DiscussionDetail.vue'), props: true },
   { path: '/wrong', name: 'wrong', component: () => import('./views/Wrong.vue') },
   { path: '/notes', name: 'notes', component: () => import('./views/Notes.vue') },
+  { path: '/proposals', name: 'proposals', component: () => import('./views/Proposals.vue') },
   { path: '/points', name: 'points', component: () => import('./views/Points.vue') },
   { path: '/levels', name: 'levels', component: () => import('./views/Levels.vue') },
   { path: '/shop', name: 'shop', component: () => import('./views/Shop.vue') },

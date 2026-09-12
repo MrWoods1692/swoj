@@ -259,4 +259,32 @@ var schemaOps = []string{
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`,
 `CREATE INDEX IF NOT EXISTS idx_notes_user_time ON notes(user_id, created_at)`,
+`CREATE TABLE IF NOT EXISTS problem_proposals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  author_id INTEGER NOT NULL,
+  author_name TEXT DEFAULT '',
+  name TEXT NOT NULL,
+  background TEXT DEFAULT '',
+  description TEXT NOT NULL,
+  input_format TEXT DEFAULT '',
+  output_format TEXT DEFAULT '',
+  hint TEXT DEFAULT '',
+  status TEXT DEFAULT 'pending',
+  review_comment TEXT DEFAULT '',
+  reviewer_id INTEGER DEFAULT 0,
+  reviewed_at TEXT DEFAULT '',
+  reward_points INTEGER DEFAULT 0,
+  approved_problem_id INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`,
+`CREATE INDEX IF NOT EXISTS idx_pp_author ON problem_proposals(author_id, created_at)`,
+`CREATE INDEX IF NOT EXISTS idx_pp_status ON problem_proposals(status, created_at)`,
+`CREATE TABLE IF NOT EXISTS proposal_cases (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  proposal_id INTEGER NOT NULL,
+  index_no INTEGER NOT NULL,
+  input TEXT NOT NULL,
+  output TEXT NOT NULL,
+  UNIQUE(proposal_id, index_no)
+)`,
 }

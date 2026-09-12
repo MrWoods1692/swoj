@@ -41,6 +41,7 @@ onMounted(() => auth.me())
         <template v-if="auth.user">
           <router-link v-if="auth.isAdmin" to="/admin" class="btn btn--ghost">{{ i18n.t('admin') }}</router-link>
           <router-link to="/notes" class="chip">{{ i18n.t('notes') }}</router-link>
+          <router-link to="/proposals" class="chip">{{ i18n.t('proposals') }}</router-link>
       <router-link to="/logs" class="chip">{{ i18n.t('logs') }}</router-link>
           <router-link to="/me" class="chip">
             <img v-if="auth.user.avatar" :src="auth.user.avatar" class="chip__ava" alt="" />

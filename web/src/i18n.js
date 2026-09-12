@@ -9,7 +9,7 @@ const dict = {
     admin: '管理后台', profile: '个人主页', login: '校园墙登录', logout: '退出', mine: '我的',
     logs: '日志',
     ai: 'AI 问答', queue: '测评队列', terms: '用户协议', privacy: '隐私政策',
-    notes: '笔记' },
+    notes: '笔记', proposals: '出题' },
   en: { home: 'Home', problems: 'Problems', training: 'Training', contests: 'Contests', assignments: 'Assignments',
     discussions: 'Discuss', submissions: 'Submissions', leaderboard: 'Ranking', wrong: 'Wrong List', points: 'Points',
     shop: 'Shop', levels: 'Levels', favorites: 'Favorites', notices: 'News', materials: 'Materials',

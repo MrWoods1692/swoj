@@ -37,6 +37,7 @@
 | [`ip_blocks.md`](ip_blocks.md) | IP 黑名单：ip_blocks 表与 /api/admin/ip-blocks |
 | [`config.md`](config.md) | 全局配置：admin_configs 键值表与 /api/admin/config |
 | [`notes.md`](notes.md) | 个人笔记：仅本人可见的私密备忘 |
+| [`proposals.md`](proposals.md) | 学生出题：题目草稿 → 审核 → 入题库 + 发积分 |
 
 ## 相关资源
 

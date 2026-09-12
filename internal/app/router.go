@@ -226,6 +226,15 @@ func NewRouter(s *Server) http.Handler {
 	pri("POST /api/admin/problems/{id}", s.problemUpdate)
 	pri("DELETE /api/admin/problems/{id}", s.problemDelete)
 
+	// 学生出题：pri 创建/查看/撤回；teacher+admin 审核
+	pri("GET /api/proposals", s.proposalListMine)
+	pri("POST /api/proposals", s.proposalCreate)
+	pri("GET /api/proposals/{id}", s.proposalDetailMine)
+	pri("PUT /api/proposals/{id}/withdraw", s.proposalWithdraw)
+	pri("DELETE /api/proposals/{id}", s.proposalDelete)
+	pri("GET /api/admin/proposals", s.proposalPendingList)
+	pri("POST /api/admin/proposals/{id}/review", s.proposalReview)
+
 	// 管理后台：测评节点与队列监控
 	pri("GET /api/admin/nodes", s.nodeList)
 	pri("POST /api/admin/nodes", s.nodeCreate)
