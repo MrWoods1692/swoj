@@ -144,6 +144,14 @@ func NewRouter(s *Server) http.Handler {
 	// 收藏：题目与训练计划共用一组端点，type 为 problem 或 plan。
 	pri("POST /api/favorites/{type}/{id}", s.favoriteToggle)
 	pri("GET /api/favorites/{type}", s.favoriteList)
+
+	// 公告：公开只读，草稿与增删改均在管理端。
+	pub("GET /api/notices", s.noticeList)
+	pub("GET /api/notices/{id}", s.noticeDetail)
+	pri("GET /api/admin/notices", s.noticeAdminList)
+	pri("POST /api/admin/notices", s.noticeCreate)
+	pri("PUT /api/admin/notices/{id}", s.noticeUpdate)
+	pri("DELETE /api/admin/notices/{id}", s.noticeDelete)
 	pub("GET /api/problems", s.problemList)
 	pub("GET /api/problems/{id}", s.problemDetail)
 	pri("POST /api/submissions", s.submit)

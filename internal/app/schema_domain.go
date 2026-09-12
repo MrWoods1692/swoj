@@ -53,6 +53,18 @@ var schemaDomain = []string{
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY(user_id, type, target_id)
 )`,
+	`CREATE TABLE IF NOT EXISTS notices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  level TEXT DEFAULT 'info',
+  pinned INTEGER DEFAULT 0,
+  visible INTEGER DEFAULT 1,
+  views INTEGER DEFAULT 0,
+  creator INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`,
 	`CREATE TABLE IF NOT EXISTS training_records (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   plan_id INTEGER NOT NULL,
