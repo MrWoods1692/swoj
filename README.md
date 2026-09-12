@@ -49,8 +49,10 @@ SWOJ_LISTEN=:8080 SWOJ_STATIC=./web/dist ./swoj
 
 ## 文档
 
-- [`docs/AI.md`](docs/AI.md) — AI 问答模块：接口规格、Token 估算、文件上传、7 天保留、用量统计
+- [`docs/README.md`](docs/README.md) — 文档索引
 - [`docs/API.md`](docs/API.md) — 全部对外 API 一览（112 条路由）
+- [`docs/AI.md`](docs/AI.md) — AI 问答模块：接口规格、Token 估算、文件上传、7 天保留、用量统计
+- [`docs/AI_STATS.md`](docs/AI_STATS.md) — AI Token 用量统计方案（字段设计、估算规则、查询端点、前端展示）
 
 部署、systemd、nginx 配置见本文档「部署」章节。
 
