@@ -3,24 +3,25 @@ package app
 import "time"
 
 type User struct {
-	ID           int64     `json:"id"`
-	Username     string    `json:"username"`
-	Email        string    `json:"email"`
-	RealName     string    `json:"realname"`
-	Role         string    `json:"role"`
-	School       string    `json:"school"`
-	Avatar       string    `json:"avatar"`
-	Signature    string    `json:"signature"`
-	Website      string    `json:"website"`
-	Background   string    `json:"background"`
-	QQ           string    `json:"qq"`
-	ProblemCount int       `json:"problem_count"`
-	RankNo       int       `json:"rank_no"`
-	Points       int       `json:"points"`
-	Level        int       `json:"level"`
-	CanSubmit    bool      `json:"can_submit"`
-	CreatedAt    time.Time `json:"created_at"`
-	LastLoginAt  time.Time `json:"last_login_at"`
+	ID              int64     `json:"id"`
+	Username        string    `json:"username"`
+	Email           string    `json:"email"`
+	RealName        string    `json:"realname"`
+	Role            string    `json:"role"`
+	School          string    `json:"school"`
+	Avatar          string    `json:"avatar"`
+	Signature       string    `json:"signature"`
+	Website         string    `json:"website"`
+	Background      string    `json:"background"`
+	QQ              string    `json:"qq"`
+	ProblemCount    int       `json:"problem_count"`
+	RankNo          int       `json:"rank_no"`
+	Points          int       `json:"points"`
+	Level           int       `json:"level"`
+	CanSubmit       bool      `json:"can_submit"`
+	TermsAcceptedAt string    `json:"terms_accepted_at,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
+	LastLoginAt     time.Time `json:"last_login_at"`
 }
 
 type Problem struct {

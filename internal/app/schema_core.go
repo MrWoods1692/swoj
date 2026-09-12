@@ -42,6 +42,7 @@ var schemaCore = []string{
   can_submit INTEGER DEFAULT 0,
   points INTEGER NOT NULL DEFAULT 0,
   level INTEGER NOT NULL DEFAULT 1,
+  terms_accepted_at TEXT DEFAULT '',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   last_login_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(oauth_provider, oauth_id)

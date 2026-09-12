@@ -84,6 +84,20 @@ func requireAdminClaims(w http.ResponseWriter, r *http.Request) (*Claims, bool) 
 	return claims, true
 }
 
+// requireEditorClaims 登录 + 编辑角色校验：老师与管理员都可维护资料类内容。
+// 与 requireAdminClaims 的区别是放行 teacher，用于资料、课件等由任课老师发布的场景。
+func requireEditorClaims(w http.ResponseWriter, r *http.Request) (*Claims, bool) {
+	claims, ok := requireClaims(w, r)
+	if !ok {
+		return nil, false
+	}
+	if !RequireRole(claims, "teacher", "admin", "super", "superadmin") {
+		Fail(w, http.StatusForbidden, "需要老师或管理员权限")
+		return nil, false
+	}
+	return claims, true
+}
+
 // userByID 按 ID 读取用户，不包含密码字段。
 func (s *Server) userByID(id int64) (User, bool) {
 	var u User

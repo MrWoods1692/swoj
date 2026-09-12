@@ -102,8 +102,12 @@ func corsMiddleware(next HandlerFunc) HandlerFunc {
 func NewRouter(s *Server) http.Handler {
 	mux := http.NewServeMux()
 	auth := authMiddleware{s}
+	// base 是全局链：recovery → cors → ipBlock → csrf → accessLog。
+	// accessLog 放最内层（最后加），这样写日志时 claims 已由 auth 注入、status_code 已确定。
+	// 对公开路由（未登录）accessLog 也会写入，user_id/username 为空——便于审计全站访问。
 	base := []func(HandlerFunc) HandlerFunc{
 		recoveryMiddleware, corsMiddleware, ipBlockMiddleware(s.db), csrfMiddleware(),
+		accessLogMiddleware(s.db, s.cfg.JWTSecret),
 	}
 
 	// add 注册带中间件链的处理器。
@@ -234,7 +238,15 @@ func NewRouter(s *Server) http.Handler {
 	// 管理后台：系统配置与操作日志
 	pri("GET /api/admin/config", s.configList)
 	pri("POST /api/admin/config", s.configSet)
-	pri("GET /api/admin/logs", s.opLogs)
+	pri("GET /api/admin/logs", s.adminLogs)
+	pri("GET /api/admin/logs/users", s.logUserIDResolver)
+	// 个人日志：登录用户查看自己的操作记录（服务端强制绑定当前 uid，忽略 user_id 参数）。
+	pri("GET /api/logs", s.myLogs)
+	// 日志辅助端点：动作下拉与每日趋势。登录即可用，作用域由角色决定——
+	// 管理员看全站，普通用户仅看自己产生过的动作与自己记录的趋势。
+	// 放在 /api/logs/* 而非 /api/admin/logs/*，让个人日志页复用同一入口。
+	pri("GET /api/logs/actions", s.logActionOptions)
+	pri("GET /api/logs/daily", s.logRangeByDay)
 
 	// 积分系统
 	pub("GET /api/points/rules", s.pointsRulesHandler)

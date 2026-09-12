@@ -40,6 +40,7 @@ onMounted(() => auth.me())
         <button class="btn btn--ghost" @click="i18n.toggle()">{{ i18n.lang === 'zh' ? 'EN' : '中' }}</button>
         <template v-if="auth.user">
           <router-link v-if="auth.isAdmin" to="/admin" class="btn btn--ghost">{{ i18n.t('admin') }}</router-link>
+      <router-link to="/logs" class="chip">{{ i18n.t('logs') }}</router-link>
           <router-link to="/me" class="chip">
             <img v-if="auth.user.avatar" :src="auth.user.avatar" class="chip__ava" alt="" />
             <span v-else class="chip__ava chip__ava--def">{{ (auth.user.realname || auth.user.username)[0] }}</span>

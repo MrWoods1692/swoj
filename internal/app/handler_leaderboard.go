@@ -9,6 +9,7 @@ import (
 // LeaderRank 排行榜单行：按 AC 数降序、总用时升序。
 type LeaderRank struct {
 	Rank      int    `json:"rank"`
+	UserID    int64  `json:"user_id"`
 	Username  string `json:"username"`
 	RealName  string `json:"real_name"`
 	Accepted  int    `json:"accepted"`
@@ -45,15 +46,15 @@ func (s *Server) leaderboard(w http.ResponseWriter, r *http.Request) {
 
 	where, args := []string{}, []any{}
 	if req.ProblemID > 0 {
-		where = append(where, "problem_id=?")
+		where = append(where, "s.problem_id=?")
 		args = append(args, req.ProblemID)
 	}
 	if req.ContestID > 0 {
-		where = append(where, "contest_id=?")
+		where = append(where, "s.contest_id=?")
 		args = append(args, req.ContestID)
 	}
 	if req.Username != "" {
-		where = append(where, "username LIKE ?")
+		where = append(where, "s.username LIKE ?")
 		args = append(args, "%"+req.Username+"%")
 	}
 	cond := ""
@@ -78,11 +79,11 @@ func (s *Server) leaderboard(w http.ResponseWriter, r *http.Request) {
 	trs.Close()
 
 	// AC 数为主排序键，通过的提交总用时为次排序键。
-	rows, err := s.db.Query(`SELECT username, COUNT(DISTINCT CASE WHEN status=? THEN problem_id END),
-		COALESCE(SUM(CASE WHEN status=? THEN time_used ELSE 0 END),0)
-		FROM submissions `+cond+`
-		GROUP BY username ORDER BY COUNT(DISTINCT CASE WHEN status=? THEN problem_id END) DESC,
-			SUM(CASE WHEN status=? THEN time_used ELSE 0 END) ASC LIMIT ? OFFSET ?`,
+	rows, err := s.db.Query(`SELECT s.user_id, s.username, COUNT(DISTINCT CASE WHEN s.status=? THEN s.problem_id END),
+		COALESCE(SUM(CASE WHEN s.status=? THEN s.time_used ELSE 0 END),0)
+		FROM submissions s `+cond+`
+		GROUP BY s.user_id ORDER BY COUNT(DISTINCT CASE WHEN s.status=? THEN s.problem_id END) DESC,
+			SUM(CASE WHEN s.status=? THEN s.time_used ELSE 0 END) ASC LIMIT ? OFFSET ?`,
 		append(append(args, StatusAccepted, StatusAccepted), StatusAccepted, StatusAccepted,
 			req.PageSize, (req.Page-1)*req.PageSize)...)
 	if err != nil {
@@ -96,7 +97,7 @@ func (s *Server) leaderboard(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var lr LeaderRank
 		var acc, tUsed int
-		if err := rows.Scan(&lr.Username, &acc, &tUsed); err != nil {
+		if err := rows.Scan(&lr.UserID, &lr.Username, &acc, &tUsed); err != nil {
 			continue
 		}
 		lr.Accepted, lr.TimeUsed = acc, tUsed

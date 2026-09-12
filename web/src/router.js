@@ -32,6 +32,8 @@ const routes = [
   { path: '/profile/:id', name: 'profile', component: () => import('./views/Profile.vue'), props: true },
   { path: '/me', name: 'me', component: () => import('./views/Profile.vue') },
   { path: '/admin', name: 'admin', component: () => import('./views/Admin.vue') },
+  { path: '/admin/logs', name: 'adminLogs', component: () => import('./views/AdminLogs.vue') },
+  { path: '/logs', name: 'myLogs', component: () => import('./views/MyLogs.vue') },
   { path: '/ai', name: 'ai', component: () => import('./views/AI.vue') },
   { path: '/404', name: '404', component: () => import('./views/NotFound.vue') },
   { path: '/:pathMatch(.*)*', redirect: '/404' },

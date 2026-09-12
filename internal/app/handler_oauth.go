@@ -218,10 +218,10 @@ func (s *Server) oauthIssue(w http.ResponseWriter, r *http.Request, username, qq
 
 	var u User
 	err := s.db.QueryRow(`SELECT id, username, email, realname, role, school, avatar, signature, website, background, qq,
-		problem_count, points, level, can_submit, created_at, last_login_at FROM users WHERE id=?`, id).
+		problem_count, points, level, can_submit, terms_accepted_at, created_at, last_login_at FROM users WHERE id=?`, id).
 		Scan(&u.ID, &u.Username, &u.Email, &u.RealName, &u.Role, &u.School, &u.Avatar, &u.Signature,
 			&u.Website, &u.Background, &u.QQ,
-			&u.ProblemCount, &u.Points, &u.Level, &u.CanSubmit,
+			&u.ProblemCount, &u.Points, &u.Level, &u.CanSubmit, &u.TermsAcceptedAt,
 			(*time.Time)(&u.CreatedAt), (*time.Time)(&u.LastLoginAt))
 	if err != nil {
 		Fail(w, http.StatusInternalServerError, "账号不存在")

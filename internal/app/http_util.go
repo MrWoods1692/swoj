@@ -83,6 +83,17 @@ func clientIP(r *http.Request) string {
 // ErrBlocked IP 被禁用。
 var ErrBlocked = errors.New("该 IP 已被禁用")
 
+// bearerToken 从 Authorization 头或 swoj_token Cookie 读取访问令牌，取不到返回空串。
+func bearerToken(r *http.Request) string {
+	if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
+		return strings.TrimSpace(h[len("Bearer "):])
+	}
+	if c, err := r.Cookie("swoj_token"); err == nil {
+		return c.Value
+	}
+	return ""
+}
+
 // ClaimsFrom 从上下文取出鉴权后的用户声明。
 func ClaimsFrom(r *http.Request) (*Claims, bool) {
 	c, ok := r.Context().Value(CtxClaims).(*Claims)

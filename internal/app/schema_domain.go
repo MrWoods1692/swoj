@@ -208,6 +208,9 @@ var schemaPoints = []string{
 }
 
 // schemaOps 运维侧：测评节点、操作日志。
+// operation_logs 覆盖所有 HTTP 请求（由 accessLogMiddleware 写入），
+// 同时保留业务侧 logOp 写入的语义动作（提交、创建、修改等）——两者共用同一张表。
+// path/status_code 是中间件层字段，业务 logOp 写入时保持空串与 0。
 var schemaOps = []string{
 	`CREATE TABLE IF NOT EXISTS operation_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -217,8 +220,13 @@ var schemaOps = []string{
   target TEXT DEFAULT '',
   detail TEXT DEFAULT '',
   ip TEXT DEFAULT '',
+  path TEXT DEFAULT '',
+  status_code INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`,
+	// 访问日志按时间倒序翻页，个人日志按 user_id + 时间倒序，两个最热查询都有索引兜底。
+	`CREATE INDEX IF NOT EXISTS idx_op_logs_created_at ON operation_logs(created_at)`,
+	`CREATE INDEX IF NOT EXISTS idx_op_logs_user_time ON operation_logs(user_id, created_at)`,
 	`CREATE TABLE IF NOT EXISTS ip_blocks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   ip TEXT NOT NULL UNIQUE,
