@@ -71,6 +71,8 @@ type OAuthConfig struct {
 	HostURL     string
 	Callback    string
 	Login       string
+	// Mock 开启后允许回调凭 mockname/mockqq 直接登录，仅用于本地联调与测试。
+	Mock bool
 }
 
 // OAuthEnabled 判断 OAuth 登录是否已配置完整并可用。
@@ -166,6 +168,7 @@ func loadOAuthConfig() OAuthConfig {
 		HostURL:     envStr("SWOJ_HOST", "http://localhost:8080"),
 		Callback:    oauthCallbackPath,
 		Login:       "/login",
+		Mock:        envBool("SWOJ_OAUTH_MOCK", false),
 	}
 	return c
 }

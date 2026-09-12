@@ -340,20 +340,58 @@ func (s *Server) profileUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		RealName  string `json:"realname"`
-		School    string `json:"school"`
-		Avatar    string `json:"avatar"`
-		Signature string `json:"signature"`
+		RealName  *string `json:"realname"`
+		School    *string `json:"school"`
+		Avatar    *string `json:"avatar"`
+		Signature *string `json:"signature"`
 	}
 	if err := decode(r, &req); err != nil {
 		Fail(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	_, err := s.db.Exec(`UPDATE users SET realname=?, school=?, avatar=?, signature=? WHERE id=?`,
-		req.RealName, req.School, req.Avatar, req.Signature, claims.UserID)
+	// 部分更新：只写前端传了的字段，避免分步补资料时清空已填内容。
+	sets := []string{}
+	args := []any{}
+	if req.RealName != nil {
+		name := strings.TrimSpace(*req.RealName)
+		if name != "" && !cnRealname.MatchString(name) {
+			Fail(w, http.StatusBadRequest, "真实姓名需为 3-4 个汉字")
+			return
+		}
+		sets = append(sets, "realname=?")
+		args = append(args, name)
+	}
+	if req.School != nil {
+		sets = append(sets, "school=?")
+		args = append(args, strings.TrimSpace(*req.School))
+	}
+	if req.Avatar != nil {
+		sets = append(sets, "avatar=?")
+		args = append(args, strings.TrimSpace(*req.Avatar))
+	}
+	if req.Signature != nil {
+		sets = append(sets, "signature=?")
+		args = append(args, strings.TrimSpace(*req.Signature))
+	}
+	if len(sets) == 0 {
+		Fail(w, http.StatusBadRequest, "没有需要更新的字段")
+		return
+	}
+	args = append(args, claims.UserID)
+	_, err := s.db.Exec(`UPDATE users SET `+strings.Join(sets, ", ")+` WHERE id=?`, args...)
 	if err != nil {
 		Fail(w, http.StatusInternalServerError, err.Error())
 		return
+	}
+	// 姓名与个人主页补全后，才算完成注册：解锁提交权限。
+	var realname, avatar, signature string
+	if err := s.db.QueryRow(`SELECT COALESCE(realname,''), COALESCE(avatar,''), COALESCE(signature,'')
+		FROM users WHERE id=?`, claims.UserID).Scan(&realname, &avatar, &signature); err != nil {
+		Fail(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if realname != "" && strings.TrimSpace(avatar) != "" && strings.TrimSpace(signature) != "" {
+		_, _ = s.db.Exec(`UPDATE users SET can_submit=1 WHERE id=?`, claims.UserID)
 	}
 	s.refreshAchievements(claims.UserID)
 	u, _ := s.userByID(claims.UserID)

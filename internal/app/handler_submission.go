@@ -50,7 +50,7 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !u.CanSubmit {
-		Fail(w, http.StatusForbidden, "该账号已被禁止提交")
+		Fail(w, http.StatusForbidden, "请先完善姓名与个人主页后再提交")
 		return
 	}
 

@@ -24,14 +24,8 @@ func seed(conn *sql.DB, cfg *Config) error {
 		return err
 	}
 
-	demoHash, err := hashPassword("demo1234")
-	if err != nil {
-		return fmt.Errorf("hash demo: %w", err)
-	}
-	if _, err := conn.Exec(`INSERT INTO users(username,password,email,role,school) VALUES(?,?,?,?,?)`,
-		"demo", demoHash, "demo@swoj.local", "user", "Swoj Academy"); err != nil {
-		return err
-	}
+	// 注册业务已下线，普通用户只能由校园墙 OAuth 首次登录时建号，
+	// 因此不再种子任何带口令的演示账号（否则会成为无法登录的死账号）。
 
 	_, err = conn.Exec(`INSERT INTO judge_nodes(name,status,accept_count,judge_type) VALUES('builtin',0,0,'cpp')`)
 	if err != nil {

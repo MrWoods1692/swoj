@@ -34,7 +34,8 @@ func main() {
 	srv := app.NewServer(cfg, db, judgeDir)
 	defer srv.Queue.Shutdown(context.Background())
 
-	handler := app.NewRouter(srv)
+	mux := app.NewRouter(srv)
+	handler := mux
 	if app.DirExists(cfg.StaticDir) {
 		handler = staticHandler(handler, cfg.StaticDir)
 	}
@@ -65,10 +66,10 @@ func main() {
 }
 
 // staticHandler 提供前端构建产物，并对前端路由做 index.html 回退。
-// 跳过 /api/ 前缀，避免把接口请求误判为页面。
+// 跳过 /api/ 与 /auth/ 前缀，避免把接口与 OAuth 登录入口误判为页面。
 func staticHandler(api http.Handler, dir string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasPrefix(r.URL.Path, "/api/") {
+		if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/auth/") {
 			api.ServeHTTP(w, r)
 			return
 		}

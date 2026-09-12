@@ -30,6 +30,9 @@ func ensureColumns(conn *sql.DB) error {
 		{"users", "points INTEGER NOT NULL DEFAULT 0"},
 		{"users", "level INTEGER NOT NULL DEFAULT 1"},
 		{"users", "online_seconds INTEGER NOT NULL DEFAULT 0"},
+		{"users", "oauth_provider TEXT NOT NULL DEFAULT ''"},
+		{"users", "oauth_id TEXT NOT NULL DEFAULT ''"},
+		{"users", "oauth_name TEXT NOT NULL DEFAULT ''"},
 	}
 	for _, c := range addCols {
 		if hasColumn(conn, c.table, c.spec) {
@@ -72,6 +75,9 @@ var schemaCore = []string{
   school TEXT DEFAULT '',
   avatar TEXT DEFAULT '',
   signature TEXT DEFAULT '',
+  oauth_provider TEXT DEFAULT '',
+  oauth_id TEXT DEFAULT '',
+  oauth_name TEXT DEFAULT '',
   problem_count INTEGER DEFAULT 0,
   rank_no INTEGER DEFAULT 0,
   can_submit INTEGER DEFAULT 1,

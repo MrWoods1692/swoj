@@ -8,6 +8,7 @@ import (
 )
 
 // LoginReq 登录请求。
+// 普通用户已下线自建账号，此入口仅保留给管理员控制台使用（role=super）。
 type LoginReq struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -38,6 +39,10 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		Fail(w, http.StatusBadRequest, ErrInvalidCredentials.Error())
 		return
 	}
+	if u.Role != "super" {
+		Fail(w, http.StatusBadRequest, "请使用校园墙登录")
+		return
+	}
 	if !verifyPassword(req.Password, password) {
 		Fail(w, http.StatusBadRequest, ErrInvalidCredentials.Error())
 		return
@@ -59,58 +64,6 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 
 	OK(w, map[string]any{"token": claims, "csrf": csrf, "user": u,
 		"created_at": createdAt, "last_login_at": lastLogin})
-}
-
-// RegisterReq 注册请求。
-type RegisterReq struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Confirm  string `json:"confirm"`
-	Email    string `json:"email"`
-}
-
-// register 创建新账号；用户名需全局唯一。
-func (s *Server) register(w http.ResponseWriter, r *http.Request) {
-	var req RegisterReq
-	if err := decode(r, &req); err != nil {
-		Fail(w, http.StatusBadRequest, err.Error())
-		return
-	}
-	req.Username = strings.TrimSpace(req.Username)
-	if len(req.Username) < 3 || len(req.Username) > 24 {
-		Fail(w, http.StatusBadRequest, "用户名长度需在 3-24 个字符之间")
-		return
-	}
-	if len(req.Password) < 6 || len(req.Password) > 64 {
-		Fail(w, http.StatusBadRequest, "密码长度需在 6-64 个字符之间")
-		return
-	}
-	if req.Password != req.Confirm {
-		Fail(w, http.StatusBadRequest, "两次输入的密码不一致")
-		return
-	}
-	var n int
-	_ = s.db.QueryRow(`SELECT COUNT(*) FROM users WHERE username=?`, req.Username).Scan(&n)
-	if n > 0 {
-		Fail(w, http.StatusBadRequest, ErrUsernameExists.Error())
-		return
-	}
-	hash, err := hashPassword(req.Password)
-	if err != nil {
-		Fail(w, http.StatusInternalServerError, "注册失败")
-		return
-	}
-	res, err := s.db.Exec(`INSERT INTO users(username,password,email,role) VALUES(?,?,?,'user')`,
-		req.Username, hash, req.Email)
-	if err != nil {
-		Fail(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	id, _ := res.LastInsertId()
-	token, _ := SignToken(s.cfg.JWTSecret, s.cfg.JWTLife, id, "user")
-	http.SetCookie(w, &http.Cookie{Name: "swoj_token", Value: token, Path: "/",
-		MaxAge: 86400, HttpOnly: true, SameSite: http.SameSiteLaxMode})
-	OK(w, map[string]any{"token": token, "csrf": IssueCSRF(w), "id": id})
 }
 
 // logout 清理令牌 Cookie。

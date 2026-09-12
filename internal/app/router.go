@@ -133,8 +133,11 @@ func NewRouter(s *Server) http.Handler {
 		OK(w, map[string]any{"csrf": IssueCSRF(w)})
 	})
 	pub("POST /api/auth/login", s.login)
-	pub("POST /api/auth/register", s.register)
 	pub("POST /api/auth/logout", s.logout)
+	// 校园墙 OAuth：唯一登录入口。注册业务已下线，首次授权自动建号。
+	// 走同一中间件链（recovery/cors/ipBlock/csrf），但均为 GET，CSRF 中间件放行。
+	pub("GET /auth/campux", s.oauthAuthorize)
+	pub("GET "+oauthCallbackPath, s.oauthCallback)
 	// 登录态接口统一走鉴权中间件，避免公开路由误开。
 	pri("GET /api/auth/me", s.me)
 	pri("PUT /api/auth/me", s.profileUpdate)
@@ -242,5 +245,14 @@ func NewRouter(s *Server) http.Handler {
 	pri("POST /api/admin/shop", s.shopCreate)
 	pri("PUT /api/admin/shop/{id}", s.shopUpdate)
 	pri("DELETE /api/admin/shop/{id}", s.shopDelete)
+
+	// 未匹配的 /api/ 与 /auth/ 路径给出 JSON 404，避免注册下线等业务变更后
+	// 调用方拿到静态页或 HTML 404 而无法解析。更具体的路由优先，不会被吞。
+	mux.HandleFunc("/api/{path...}", func(w http.ResponseWriter, r *http.Request) {
+		Fail(w, http.StatusNotFound, "接口不存在")
+	})
+	mux.HandleFunc("/auth/{path...}", func(w http.ResponseWriter, r *http.Request) {
+		Fail(w, http.StatusNotFound, "登录入口不存在")
+	})
 	return mux
 }
