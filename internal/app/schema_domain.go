@@ -116,6 +116,9 @@ var schemaDomain = []string{
   question TEXT NOT NULL,
   answer TEXT DEFAULT '',
   source TEXT DEFAULT '',
+  prompt_tokens INTEGER DEFAULT 0,
+  answer_tokens INTEGER DEFAULT 0,
+  total_tokens INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`,
 	`CREATE TABLE IF NOT EXISTS recommendation (

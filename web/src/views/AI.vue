@@ -12,6 +12,8 @@ const answer = ref(null)
 const history = ref([])
 const disabled = ref(false)
 const login = ref(false)
+const myStats = ref(null)
+const adminStats = ref(null)
 
 const isAdmin = computed(() => auth.isAdmin)
 
@@ -29,16 +31,23 @@ const ask = async () => {
   for (const f of files.value) fd.append('files[]', f, f.name)
   try {
     const r = await api.upload('/api/ai/ask', fd)
-    answer.value = { answer: r.answer, source: r.source, id: r.id }
+    answer.value = {
+      answer: r.answer, source: r.source, id: r.id,
+      prompt_tokens: r.prompt_tokens, answer_tokens: r.answer_tokens,
+      total_tokens: r.total_tokens,
+    }
     history.value.unshift({
       id: r.id, answer: r.answer, source: r.source,
       question: question.value || '(文件附件) ' + files.value.map(f => f.name).join(', '),
       problem_id: problemId.value ? Number(problemId.value) : 0,
       created_at: new Date().toISOString(),
+      prompt_tokens: r.prompt_tokens, answer_tokens: r.answer_tokens,
+      total_tokens: r.total_tokens,
     })
     question.value = ''
     code.value = ''
     files.value = []
+    await refreshMyStats()
   } catch (e) {
     if (/登录/.test(e.message)) login.value = true
     if (/未启用|Token/.test(e.message)) disabled.value = true
@@ -46,6 +55,11 @@ const ask = async () => {
   } finally {
     sending.value = false
   }
+}
+
+const refreshMyStats = async () => {
+  if (!auth.user) return
+  myStats.value = await api.get('/api/ai/stats').catch(() => null)
 }
 
 const onFileChange = (ev) => {
@@ -65,6 +79,7 @@ onMounted(async () => {
   login.value = !auth.user
   if (auth.user) {
     history.value = await api.get('/api/ai/history').catch(() => [])
+    await refreshMyStats()
   }
 })
 
@@ -85,6 +100,7 @@ onMounted(async () => {
   myTokenMask.value = r.token_masked || ''
   defaultPrompt.value = r.default_prompt || ''
   promptLoaded.value = true
+  adminStats.value = await api.get('/api/admin/ai-stats').catch(() => null)
 })
 
 const saveCfg = async () => {
@@ -102,6 +118,8 @@ const saveCfg = async () => {
   } catch (e) { toast(e.message, false) }
   finally { savingPrompt.value = false }
 }
+
+const fmtNum = (n) => (n || 0).toLocaleString()
 </script>
 
 <template>
@@ -115,6 +133,24 @@ const saveCfg = async () => {
         <button v-if="login" class="btn btn--primary" style="width:100%" @click="auth.login()">登录后使用</button>
 
         <template v-else>
+          <div class="row" style="gap:10px;flex-wrap:wrap;margin-bottom:10px">
+            <div v-if="myStats" class="chip" style="padding:6px 10px">
+              <span class="small muted">总提问</span>
+              <strong>{{ fmtNum(myStats.total_calls) }}</strong>
+            </div>
+            <div v-if="myStats" class="chip" style="padding:6px 10px">
+              <span class="small muted">总 Token</span>
+              <strong>{{ fmtNum(myStats.total_tokens) }}</strong>
+            </div>
+            <div v-if="myStats" class="chip" style="padding:6px 10px">
+              <span class="small muted">今日</span>
+              <strong>{{ fmtNum(myStats.today_calls) }}</strong>
+              <span class="small muted">次 ·</span>
+              <strong>{{ fmtNum(myStats.today_tokens) }}</strong>
+              <span class="small muted">token</span>
+            </div>
+          </div>
+
           <div class="fld">
             <span class="small">附件上传（.cpp / .txt / .in / .out 等，单文件 ≤ 1MB，最多 5 个）</span>
             <input type="file" multiple
@@ -173,8 +209,13 @@ const saveCfg = async () => {
           <span class="chip small" v-if="answer.source">{{ answer.source }}</span>
         </div>
         <div class="mono" style="white-space:pre-wrap;line-height:1.7">{{ answer.answer }}</div>
-        <div class="small muted" style="margin-top:10px">
-          记录 ID {{ answer.id }} · 已写入历史记录（保留 7 天）
+        <div class="row small muted" style="margin-top:10px;gap:12px;flex-wrap:wrap">
+          <span>记录 ID {{ answer.id }}</span>
+          <span>·</span>
+          <span>本次消耗 <strong style="color:var(--accent)">{{ fmtNum(answer.total_tokens) }}</strong> token
+            （prompt {{ fmtNum(answer.prompt_tokens) }} + answer {{ fmtNum(answer.answer_tokens) }}）
+          </span>
+          <span>· 保留 7 天</span>
         </div>
       </div>
 
@@ -183,6 +224,21 @@ const saveCfg = async () => {
         <p class="small muted">
           对话记录仅保留 7 天。留空提示词则使用内置默认提示词。Token 留空表示不修改。
         </p>
+        <div v-if="adminStats" class="row" style="gap:10px;flex-wrap:wrap;margin-bottom:12px;padding:10px;background:var(--bg-2);border-radius:8px">
+          <div class="chip" style="padding:6px 10px">
+            <span class="small muted">全局提问</span>
+            <strong>{{ fmtNum(adminStats.total_calls) }}</strong>
+          </div>
+          <div class="chip" style="padding:6px 10px">
+            <span class="small muted">全局 Token</span>
+            <strong>{{ fmtNum(adminStats.total_tokens) }}</strong>
+          </div>
+          <div class="chip" style="padding:6px 10px">
+            <span class="small muted">活跃用户</span>
+            <strong>{{ fmtNum(adminStats.total_users) }}</strong>
+          </div>
+        </div>
+
         <label class="fld">
           <span>Token
             <span class="small muted">（当前掩码：{{ myTokenMask || '未配置' }}）</span>
@@ -207,6 +263,38 @@ const saveCfg = async () => {
           <button class="btn" @click="myToken = ''">清空 Token 输入</button>
           <button class="btn btn--sm" @click="myPrompt = defaultPrompt">提示词使用默认</button>
         </div>
+
+        <div v-if="adminStats && adminStats.top_users && adminStats.top_users.length">
+          <div class="small muted" style="margin-top:14px;margin-bottom:6px">Token 消耗 Top（近 7 天）</div>
+          <table class="tbl small" style="width:100%">
+            <thead>
+              <tr><th>用户</th><th>提问</th><th>Token</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="u in adminStats.top_users.slice(0, 8)" :key="u.user_id">
+                <td>{{ u.username }}</td>
+                <td>{{ fmtNum(u.calls) }}</td>
+                <td>{{ fmtNum(u.tokens) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div v-if="adminStats && adminStats.daily_7d && adminStats.daily_7d.length">
+          <div class="small muted" style="margin-top:14px;margin-bottom:6px">近 7 天趋势</div>
+          <table class="tbl small" style="width:100%">
+            <thead>
+              <tr><th>日期</th><th>提问</th><th>Token</th></tr>
+            </thead>
+            <tbody>
+              <tr v-for="d in adminStats.daily_7d" :key="d.day">
+                <td>{{ d.day }}</td>
+                <td>{{ fmtNum(d.calls) }}</td>
+                <td>{{ fmtNum(d.tokens) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -227,11 +315,14 @@ const saveCfg = async () => {
         <div class="small muted mono" style="margin-top:8px;white-space:pre-wrap;max-height:120px;overflow:auto">
           {{ h.answer }}
         </div>
-        <div class="row" style="margin-top:8px">
+        <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap">
           <router-link v-if="h.problem_id" :to="'/problems/' + h.problem_id" class="btn btn--sm">
             题目 #{{ h.problem_id }}
           </router-link>
           <button class="btn btn--sm" @click="question = h.question">再次提问</button>
+          <span v-if="h.total_tokens" class="chip small">
+            {{ fmtNum(h.total_tokens) }} token
+          </span>
         </div>
       </div>
     </div>

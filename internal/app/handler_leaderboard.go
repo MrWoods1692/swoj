@@ -268,11 +268,15 @@ func (s *Server) aiAsk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	answer, src, err := callAI(s.AI, s.aiPrompt(req, files))
+	promptText := s.aiPrompt(req, files)
+	answer, src, err := callAI(s.AI, promptText)
 	if err != nil {
 		Fail(w, http.StatusBadGateway, "AI 服务调用失败："+err.Error())
 		return
 	}
+	// Token 估算：中英文混合下按"非 ASCII 每字 1 token、ASCII 每 4 字符 1 token"近似。
+	promptTokens := estimateTokens(promptText)
+	answerTokens := estimateTokens(answer)
 
 	// 保存到 ai_qas：question 存用户提问；若无 question 但有文件，落一份文件摘要。
 	stored := question
@@ -280,14 +284,23 @@ func (s *Server) aiAsk(w http.ResponseWriter, r *http.Request) {
 		stored = "(文件附件：" + strings.Join(fileNames(files), ", ") + ")"
 	}
 
-	res, err := s.db.Exec(`INSERT INTO ai_qas(user_id, problem_id, question, answer, source) VALUES(?,?,?,?,?)`,
-		claims.UserID, req.ProblemID, stored, answer, src)
+	res, err := s.db.Exec(`INSERT INTO ai_qas(user_id, problem_id, question, answer, source,
+		prompt_tokens, answer_tokens, total_tokens) VALUES(?,?,?,?,?,?,?,?)`,
+		claims.UserID, req.ProblemID, stored, answer, src,
+		promptTokens, answerTokens, promptTokens+answerTokens)
 	if err != nil {
 		Fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	id, _ := res.LastInsertId()
-	OK(w, map[string]any{"id": id, "answer": answer, "source": src})
+	OK(w, map[string]any{
+		"id":             id,
+		"answer":         answer,
+		"source":         src,
+		"prompt_tokens":  promptTokens,
+		"answer_tokens":  answerTokens,
+		"total_tokens":   promptTokens + answerTokens,
+	})
 }
 
 // aiPrompt 拼装发给模型的上下文，含题目信息、代码、当前判题状态与附件内容。
@@ -323,6 +336,26 @@ func (s *Server) aiPrompt(req AIAskReq, files []AIFileItem) string {
 	return "用户问题：" + q + ctx
 }
 
+// estimateTokens 粗略估算 prompt/answer 消耗的 token 数。
+// 中文/日文/韩文等非 ASCII 字符按每字 1 token 估算，ASCII 按每 4 字符 1 token 估算。
+// 用于用户配额与全局消耗展示；精确计量由上游服务商回调提供。
+func estimateTokens(s string) int {
+	nonspace := 0
+	cjk := 0
+	for _, r := range s {
+		if r == ' ' || r == '\t' || r == '\n' || r == '\r' {
+			continue
+		}
+		if r >= 0x4E00 && r <= 0x9FFF || r >= 0x3000 && r <= 0x30FF ||
+			r >= 0xAC00 && r <= 0xD7AF || r >= 0x3400 && r <= 0x4DBF {
+			cjk++
+		} else {
+			nonspace++
+		}
+	}
+	return cjk + (nonspace + 3) / 4
+}
+
 // isTextFile 判断扩展名是否是可发送给模型的文本文件。
 func isTextFile(name string) bool {
 	ext := strings.ToLower(filepath.Ext(name))
@@ -351,8 +384,10 @@ func (s *Server) aiHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	since := time.Now().Add(-aiRetentionDuration)
-	rows, err := s.db.Query(`SELECT id, problem_id, question, answer, source, created_at FROM ai_qas
-		WHERE user_id=? AND created_at >= ? ORDER BY id DESC LIMIT 50`, claims.UserID, since)
+	rows, err := s.db.Query(`SELECT id, problem_id, question, answer, source,
+		COALESCE(prompt_tokens,0), COALESCE(answer_tokens,0), COALESCE(total_tokens,0),
+		created_at FROM ai_qas
+	WHERE user_id=? AND created_at >= ? ORDER BY id DESC LIMIT 50`, claims.UserID, since)
 	if err != nil {
 		Fail(w, http.StatusInternalServerError, err.Error())
 		return
@@ -363,6 +398,7 @@ func (s *Server) aiHistory(w http.ResponseWriter, r *http.Request) {
 		var it AIHistoryItem
 		var created time.Time
 		if err := rows.Scan(&it.ID, &it.ProblemID, &it.Question, &it.Answer, &it.Source,
+			&it.PromptTokens, &it.AnswerTokens, &it.TotalTokens,
 			(*time.Time)(&created)); err != nil {
 			continue
 		}
@@ -374,12 +410,15 @@ func (s *Server) aiHistory(w http.ResponseWriter, r *http.Request) {
 
 // AIHistoryItem AI 问答历史记录。
 type AIHistoryItem struct {
-	ID        int64  `json:"id"`
-	ProblemID int64  `json:"problem_id"`
-	Question  string `json:"question"`
-	Answer    string `json:"answer"`
-	Source    string `json:"source"`
-	CreatedAt string `json:"created_at"`
+	ID           int64  `json:"id"`
+	ProblemID    int64  `json:"problem_id"`
+	Question     string `json:"question"`
+	Answer       string `json:"answer"`
+	Source       string `json:"source"`
+	PromptTokens int64  `json:"prompt_tokens"`
+	AnswerTokens int64  `json:"answer_tokens"`
+	TotalTokens  int64  `json:"total_tokens"`
+	CreatedAt    string `json:"created_at"`
 }
 
 // AICfgReq 管理员后台保存 AI 配置的请求体。
@@ -390,6 +429,106 @@ type AICfgReq struct {
 	ClearToken   bool   `json:"clear_token"` // 显式清除已保存的 Token
 }
 
+// aiStats 返回当前用户 AI 用量（总提问次数、总 token 消耗、今日用量）。
+func (s *Server) aiStats(w http.ResponseWriter, r *http.Request) {
+	claims, ok := requireClaims(w, r)
+	if !ok {
+		return
+	}
+	today := time.Now().Truncate(24 * time.Hour).Format("2006-01-02")
+	var totalCalls, totalPrompt, totalAnswer, todayCalls, todayTokens int64
+	_ = s.db.QueryRow(`SELECT COALESCE(SUM(prompt_tokens),0), COALESCE(SUM(answer_tokens),0), COUNT(*)
+		FROM ai_qas WHERE user_id=?`, claims.UserID).
+		Scan(&totalPrompt, &totalAnswer, &totalCalls)
+	_ = s.db.QueryRow(`SELECT COALESCE(SUM(total_tokens),0), COUNT(*)
+		FROM ai_qas WHERE user_id=? AND date(created_at)=?`, claims.UserID, today).
+		Scan(&todayTokens, &todayCalls)
+	OK(w, map[string]any{
+		"total_calls":     totalCalls,
+		"total_tokens":    totalPrompt + totalAnswer,
+		"prompt_tokens":   totalPrompt,
+		"answer_tokens":   totalAnswer,
+		"today_calls":     todayCalls,
+		"today_tokens":    todayTokens,
+		"retention_days":  aiRetentionDays,
+	})
+}
+
+// aiAdminStats 返回全局 AI 用量统计（仅管理员）。
+// 包含：全局总量、Top 用户、每日趋势（近 7 天）。
+func (s *Server) aiAdminStats(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireAdminClaims(w, r); !ok {
+		return
+	}
+	var totalCalls, totalTokens int64
+	_ = s.db.QueryRow(`SELECT COUNT(*), COALESCE(SUM(total_tokens),0) FROM ai_qas`).
+		Scan(&totalCalls, &totalTokens)
+	var totalUsers int64
+	_ = s.db.QueryRow(`SELECT COUNT(DISTINCT user_id) FROM ai_qas`).Scan(&totalUsers)
+
+	topRows, err := s.db.Query(`
+		SELECT u.id, u.username, COUNT(*) as calls,
+		       COALESCE(SUM(aq.total_tokens),0) as tokens
+		FROM ai_qas aq
+		JOIN users u ON u.id = aq.user_id
+		GROUP BY u.id
+		ORDER BY tokens DESC
+		LIMIT 20`)
+	if err != nil {
+		Fail(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer topRows.Close()
+	topUsers := []map[string]any{}
+	for topRows.Next() {
+		var uid int64
+		var username string
+		var calls, tokens int64
+		if err := topRows.Scan(&uid, &username, &calls, &tokens); err != nil {
+			continue
+		}
+		topUsers = append(topUsers, map[string]any{
+			"user_id":   uid,
+			"username":  username,
+			"calls":     calls,
+			"tokens":    tokens,
+		})
+	}
+
+	dayRows, err := s.db.Query(`
+		SELECT date(created_at) as day, COUNT(*) as calls,
+		       COALESCE(SUM(total_tokens),0) as tokens
+		FROM ai_qas
+		WHERE created_at >= datetime('now', '-7 days')
+		GROUP BY day ORDER BY day`)
+	if err != nil {
+		Fail(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer dayRows.Close()
+	daily := []map[string]any{}
+	for dayRows.Next() {
+		var day string
+		var calls, tokens int64
+		if err := dayRows.Scan(&day, &calls, &tokens); err != nil {
+			continue
+		}
+		daily = append(daily, map[string]any{
+			"day":    day,
+			"calls":  calls,
+			"tokens": tokens,
+		})
+	}
+
+	OK(w, map[string]any{
+		"total_calls":  totalCalls,
+		"total_tokens": totalTokens,
+		"total_users":  totalUsers,
+		"top_users":    topUsers,
+		"daily_7d":     daily,
+	})
+}
+
 // aiConfigGet 返回当前 AI 配置（token 做掩码处理）。
 // 非空 token 显示为前 4 + **** + 后 4；未配置时为空串。
 func (s *Server) aiConfigGet(w http.ResponseWriter, r *http.Request) {
@@ -398,6 +537,9 @@ func (s *Server) aiConfigGet(w http.ResponseWriter, r *http.Request) {
 	}
 	// 每次从 DB 重新读取一次，保证返回的是后台最新值。
 	loadAIConfig(s.db, s.AI)
+	var totalTokensGlobal, totalCallsGlobal int64
+	_ = s.db.QueryRow(`SELECT COALESCE(SUM(total_tokens),0), COUNT(*) FROM ai_qas`).
+		Scan(&totalTokensGlobal, &totalCallsGlobal)
 	OK(w, map[string]any{
 		"enabled":       s.AI.Enabled,
 		"provider":      s.AI.Provider,
@@ -407,6 +549,8 @@ func (s *Server) aiConfigGet(w http.ResponseWriter, r *http.Request) {
 		"system_prompt": s.AI.SystemPrompt,
 		"default_prompt": DefaultAISystemPrompt,
 		"retention_days": aiRetentionDays,
+		"global_tokens":  totalTokensGlobal,
+		"global_calls":   totalCallsGlobal,
 	})
 }
 
