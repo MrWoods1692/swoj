@@ -195,6 +195,10 @@ func NewRouter(s *Server) http.Handler {
 	// 服务状态（公开）与服务端健康检查
 	pub("GET /api/status", s.serviceStatus)
 
+	// 全站统计：公开概览供首页，明细面板限管理员。
+	pub("GET /api/stats/site", s.statsSite)
+	pri("GET /api/admin/stats", s.statsAdmin)
+
 	// 管理后台：题目管理
 	pri("POST /api/admin/problems", s.problemCreate)
 	pri("POST /api/admin/problems/{id}", s.problemUpdate)
