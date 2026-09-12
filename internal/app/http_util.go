@@ -47,9 +47,17 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 }
 
 // decode 解析 JSON 请求体，并限制大小防止请求体过大。
+// 无请求体（空 body）时视为零值结构，便于 GET 带查询参数的调用复用。
 func decode(r *http.Request, dst any) error {
+	if r.Body == nil {
+		return nil
+	}
 	r.Body = http.MaxBytesReader(nil, r.Body, 2<<20)
-	if err := json.NewDecoder(r.Body).Decode(dst); err != nil {
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(dst); err != nil {
+		if err.Error() == "EOF" {
+			return nil
+		}
 		return fmt.Errorf("请求参数格式错误: %w", err)
 	}
 	return nil

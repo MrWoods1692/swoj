@@ -135,9 +135,50 @@ func NewRouter(s *Server) http.Handler {
 	pub("POST /api/auth/login", s.login)
 	pub("POST /api/auth/register", s.register)
 	pub("POST /api/auth/logout", s.logout)
-	pub("GET /api/auth/me", s.me)
+	// 登录态接口统一走鉴权中间件，避免公开路由误开。
+	pri("GET /api/auth/me", s.me)
 	pub("GET /api/problems", s.problemList)
 	pub("GET /api/problems/{id}", s.problemDetail)
 	pri("POST /api/submissions", s.submit)
+
+	// 提交记录
+	pri("GET /api/submissions", s.submissionList)
+	pri("GET /api/submissions/{id}", s.submissionDetail)
+
+	// 比赛
+	pub("GET /api/contests", s.contestList)
+	pri("POST /api/contests", s.contestCreate)
+	pub("GET /api/contests/{id}", s.contestDetail)
+	pub("GET /api/contests/{id}/rank", s.contestRank)
+	pri("POST /api/contests/{id}/enroll", s.contestEnroll)
+
+	// 作业
+	pub("GET /api/assignments", s.assignmentList)
+	pub("GET /api/assignments/{id}", s.assignmentDetail)
+	pri("POST /api/assignments", s.assignmentCreate)
+
+	// 训练计划
+	pub("GET /api/training-plans", s.planList)
+	pub("GET /api/training-plans/{id}", s.planDetail)
+	pri("POST /api/training-plans", s.planCreate)
+
+	// 讨论
+	pub("GET /api/discussions", s.discussionList)
+	pub("GET /api/discussions/{id}", s.discussionDetail)
+	pri("POST /api/discussions", s.discussionCreate)
+	pri("POST /api/discussions/{id}/reply", s.discussionReply)
+	pri("POST /api/discussions/{id}/like", s.discussionLike)
+
+	// 排行榜与个人统计
+	pub("GET /api/leaderboard", s.leaderboard)
+	pri("GET /api/auth/me/stats", s.myStats)
+
+	// 错题本
+	pri("GET /api/wrong-questions", s.wrongQuestionList)
+	pri("DELETE /api/wrong-questions/{id}", s.wrongQuestionRemove)
+
+	// AI 问答与解析
+	pri("POST /api/ai/ask", s.aiAsk)
+	pri("GET /api/ai/history", s.aiHistory)
 	return mux
 }

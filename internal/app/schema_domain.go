@@ -80,6 +80,8 @@ var schemaDomain = []string{
   problem_id INTEGER NOT NULL,
   problem_name TEXT DEFAULT '',
   times INTEGER DEFAULT 1,
+  accepted INTEGER DEFAULT 0,
+  removed INTEGER DEFAULT 0,
   last_try_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user_id, problem_id)
 )`,

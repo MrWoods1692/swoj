@@ -53,6 +53,11 @@ func (d *DB) Query(query string, args ...any) (*sql.Rows, error) {
 	return d.conn.Query(query, args...)
 }
 
+// Begin 开启事务，用于计数更新与去重表的原子联动。
+func (d *DB) Begin() (*sql.Tx, error) {
+	return d.conn.Begin()
+}
+
 // Close 关闭连接。
 func (d *DB) Close() error {
 	return d.conn.Close()
