@@ -206,8 +206,34 @@ func NewRouter(s *Server) http.Handler {
 	pri("POST /api/admin/config", s.configSet)
 	pri("GET /api/admin/logs", s.opLogs)
 
+	// 积分系统
+	pub("GET /api/points/rules", s.pointsRulesHandler)
+	pub("GET /api/points/rank", s.pointsLeaderboardHandler)
+	pri("GET /api/points", s.pointsDetail)
+	pri("GET /api/points/log", s.pointsDetail)
+	pri("GET /api/points/checkin", s.checkinStatus)
+	pri("POST /api/points/checkin", s.checkin)
+	pri("POST /api/points/online", s.onlineHeartbeat)
+	pri("GET /api/points/online", s.onlineSummary)
+
+	// 积分商城
+	pub("GET /api/shop", s.shopList)
+	pri("POST /api/shop/redeem", s.shopRedeem)
+	pri("GET /api/shop/orders", s.shopOrders)
+
 	// AI 问答与解析
 	pri("POST /api/ai/ask", s.aiAsk)
 	pri("GET /api/ai/history", s.aiHistory)
+
+	// 管理后台：积分规则与商城
+	pri("POST /api/admin/points/adjust", s.adminPointsAdjust)
+	pri("POST /api/admin/points/grant", s.adminPointsGrant)
+	pri("POST /api/admin/points/contest/{id}/rule", s.contestPointsSetRule)
+	pri("GET /api/admin/points/contest/{id}/rule", s.contestPointsGetRule)
+	pri("POST /api/admin/points/contest/{id}/apply", s.contestPointsApply)
+	pri("GET /api/admin/shop", s.shopAdminList)
+	pri("POST /api/admin/shop", s.shopCreate)
+	pri("PUT /api/admin/shop/{id}", s.shopUpdate)
+	pri("DELETE /api/admin/shop/{id}", s.shopDelete)
 	return mux
 }

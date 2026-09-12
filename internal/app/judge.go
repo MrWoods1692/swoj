@@ -51,6 +51,7 @@ type JudgeResult struct {
 type Judge struct {
 	db       *DB
 	cfg      *JudgeConfig
+	points   *PointsConfig // 难度 -> 积分映射，AC 时入账
 	pool     chan struct{}
 	baseDir  string
 	wrapOnce sync.Once
@@ -59,14 +60,17 @@ type Judge struct {
 }
 
 // NewJudge 创建测评器。
-func NewJudge(db *DB, cfg *JudgeConfig, baseDir string) *Judge {
+func NewJudge(db *DB, cfg *JudgeConfig, points *PointsConfig, baseDir string) *Judge {
 	if cfg.UserMemLimit <= 0 {
 		cfg.UserMemLimit = 256
 	}
 	if cfg.UserTimeout <= 0 {
 		cfg.UserTimeout = 1 * time.Second
 	}
-	return &Judge{db: db, cfg: cfg, pool: make(chan struct{}, cfg.PoolSize), baseDir: baseDir}
+	if points == nil {
+		points = DefaultPointsConfig()
+	}
+	return &Judge{db: db, cfg: cfg, points: points, pool: make(chan struct{}, cfg.PoolSize), baseDir: baseDir}
 }
 
 // Run 测评一条提交：编译 → 逐用例执行 → 写回状态。
@@ -352,12 +356,46 @@ func (j *Judge) compileWrapper() (string, error) {
 // loadProblem 读取题目及其资源限制。
 func (j *Judge) loadProblem(id int64) (Problem, error) {
 	p := Problem{}
-	row := j.db.QueryRow(`SELECT id, name, time_limit, mem_limit, file_limit, stack_limit FROM problems WHERE id=?`, id)
-	err := row.Scan(&p.ID, &p.Name, &p.TimeLimit, &p.MemLimit, &p.FileLimit, &p.StackLimit)
+	row := j.db.QueryRow(`SELECT id, name, difficulty, time_limit, mem_limit, file_limit, stack_limit FROM problems WHERE id=?`, id)
+	err := row.Scan(&p.ID, &p.Name, &p.Difficulty, &p.TimeLimit, &p.MemLimit, &p.FileLimit, &p.StackLimit)
 	if err != nil {
 		return p, fmt.Errorf("problem not found: %w", err)
 	}
 	return p, nil
+}
+
+// awardACPts 为一次 AC 发放难度积分。
+// 仅当用户此前未通过该题时才发放，防止重复提交刷分。
+func (j *Judge) awardACPts(userID, problemID int64, difficulty string) {
+	if j.points == nil {
+		return
+	}
+	var n int
+	if err := j.db.QueryRow(`SELECT COUNT(*) FROM submissions WHERE user_id=? AND problem_id=? AND status=?`,
+		userID, problemID, StatusAccepted).Scan(&n); err != nil {
+		return
+	}
+	if n > 1 {
+		return
+	}
+	gain := j.points.acPoints(difficulty)
+	if gain <= 0 {
+		return
+	}
+	tx, err := j.db.Begin()
+	if err != nil {
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+	if _, err := tx.Exec(`UPDATE users SET points = points + ? WHERE id=?`, gain, userID); err != nil {
+		return
+	}
+	if _, err := tx.Exec(`INSERT INTO points_log(user_id, delta, category, ref_type, ref_id, remark)
+		VALUES(?,?,?,?,?,?)`, userID, gain, CategoryAC, "problem", problemID,
+		fmt.Sprintf("通过题目[%s] +%d", difficulty, gain)); err != nil {
+		return
+	}
+	_ = tx.Commit()
 }
 
 // loadCases 按顺序读取全部测试用例。
@@ -400,6 +438,8 @@ func (j *Judge) writeResult(subID int64, r JudgeResult, p Problem) error {
 	if r.Status == StatusAccepted {
 		_, _ = j.db.Exec(`UPDATE problems SET accept = accept + 1 WHERE id=?`, p.ID)
 		_, _ = j.db.Exec(`UPDATE users SET problem_count = problem_count + 1 WHERE id=?`, sub.UserID)
+		// 难度积分：仅首次通过该题计入，避免重复刷分。
+		j.awardACPts(sub.UserID, p.ID, p.Difficulty)
 	}
 	if r.Status != StatusAccepted {
 		_, _ = j.db.Exec(`INSERT INTO wrong_questions(user_id, problem_id, problem_name, times, last_try_at)

@@ -110,6 +110,57 @@ var schemaDomain = []string{
 )`,
 }
 
+// schemaPoints 积分系统：总积分、流水、签到、在线统计、积分商城。
+var schemaPoints = []string{
+	`CREATE TABLE IF NOT EXISTS checkins (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  date TEXT NOT NULL,
+  streak INTEGER NOT NULL DEFAULT 1,
+  points INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(user_id, date)
+)`,
+	`CREATE TABLE IF NOT EXISTS points_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  delta INTEGER NOT NULL,
+  category TEXT NOT NULL,
+  ref_type TEXT DEFAULT '',
+  ref_id INTEGER DEFAULT 0,
+  remark TEXT DEFAULT '',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`,
+	`CREATE TABLE IF NOT EXISTS online_stats (
+  user_id INTEGER PRIMARY KEY,
+  online_seconds INTEGER NOT NULL DEFAULT 0,
+  points_awarded INTEGER NOT NULL DEFAULT 0,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`,
+	`CREATE TABLE IF NOT EXISTS shop_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  price INTEGER NOT NULL,
+  stock INTEGER NOT NULL DEFAULT 0,
+  status INTEGER NOT NULL DEFAULT 1,
+  publisher_id INTEGER NOT NULL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`,
+	`CREATE TABLE IF NOT EXISTS shop_orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  item_id INTEGER NOT NULL,
+  item_name TEXT DEFAULT '',
+  price INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`,
+	`CREATE TABLE IF NOT EXISTS contest_points_rules (
+  contest_id INTEGER PRIMARY KEY,
+  rule TEXT NOT NULL DEFAULT '{}',
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`,
+}
+
 // schemaOps 运维侧：测评节点、操作日志。
 var schemaOps = []string{
 	`CREATE TABLE IF NOT EXISTS operation_logs (

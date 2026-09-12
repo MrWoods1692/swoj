@@ -3,6 +3,7 @@ package app
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 )
 
 // migrate 创建全部数据表。按业务域拆分，便于独立演进。
@@ -10,12 +11,47 @@ func migrate(conn *sql.DB) error {
 	schema := append([]string{}, schemaCore...)
 	schema = append(schema, schemaDomain...)
 	schema = append(schema, schemaOps...)
+	schema = append(schema, schemaPoints...)
 	for _, t := range schema {
 		if _, err := conn.Exec(t); err != nil {
 			return fmt.Errorf("create table: %w", err)
 		}
 	}
+	return ensureColumns(conn)
+}
+
+// ensureColumns 给已存在的旧表补上新增列。SQLite 不支持 IF NOT EXISTS，需先查列。
+func ensureColumns(conn *sql.DB) error {
+	cols := map[string]string{
+		"users": "points INTEGER NOT NULL DEFAULT 0",
+	}
+	for table, spec := range cols {
+		if hasColumn(conn, table, spec) {
+			continue
+		}
+		if _, err := conn.Exec(`ALTER TABLE ` + table + ` ADD COLUMN ` + spec); err != nil {
+			return fmt.Errorf("alter %s: %w", table, err)
+		}
+	}
 	return nil
+}
+
+// hasColumn 判断表中是否已有该列。从 ALTER 语句里取列名。
+func hasColumn(conn *sql.DB, table, addCol string) bool {
+	name := strings.Fields(addCol)[0]
+	var got string
+	rows, err := conn.Query(`SELECT name FROM pragma_table_info(?)`, table)
+	if err != nil {
+		return false
+	}
+	defer rows.Close()
+	for rows.Next() {
+		_ = rows.Scan(&got)
+		if got == name {
+			return true
+		}
+	}
+	return false
 }
 
 // schemaCore 用户、题目、提交、测评。

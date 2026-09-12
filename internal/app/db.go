@@ -20,12 +20,16 @@ func OpenDB(dataDir string, cfg *Config) (*DB, error) {
 		return nil, fmt.Errorf("create data dir: %w", err)
 	}
 	path := filepath.Join(dataDir, "swoj.db")
-	conn, err := sql.Open("sqlite", path)
+	// PRAGMA 是连接级的，多连接下必须随 DSN 下发，否则只有建库那条连接生效。
+	conn, err := sql.Open("sqlite", path+"?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)")
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite: %w", err)
 	}
-	// WAL 允许读写并发；busy_timeout 降低多 goroutine 竞争时的锁等待失败。
-	conn.SetMaxOpenConns(1)
+	// WAL 允许读写并发；保留多个连接是为了让事务可用：
+	// 若只开 1 条连接，Begin 会占住唯一连接，同连接上的后续查询必然死锁，
+	// 导致写事务内的语句全部静默失败（点赞计数、删题、积分入账都受影响）。
+	conn.SetMaxOpenConns(3)
+	conn.SetMaxIdleConns(3)
 	if _, err := conn.Exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;`); err != nil {
 		return nil, fmt.Errorf("pragma: %w", err)
 	}

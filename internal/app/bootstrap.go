@@ -4,7 +4,7 @@ import "time"
 
 // NewServer 构建服务并初始化测评队列与限流器。
 func NewServer(cfg *Config, db *DB, judgeDir string) *Server {
-	judge := NewJudge(db, &cfg.Judge, judgeDir)
+	judge := NewJudge(db, &cfg.Judge, cfg.Points, judgeDir)
 	return &Server{
 		cfg:         cfg,
 		db:          db,
