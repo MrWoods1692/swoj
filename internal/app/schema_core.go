@@ -21,16 +21,22 @@ func migrate(conn *sql.DB) error {
 }
 
 // ensureColumns 给已存在的旧表补上新增列。SQLite 不支持 IF NOT EXISTS，需先查列。
+// 用切片而非 map，允许同一张表补多列。
 func ensureColumns(conn *sql.DB) error {
-	cols := map[string]string{
-		"users": "points INTEGER NOT NULL DEFAULT 0",
+	addCols := []struct {
+		table string
+		spec  string
+	}{
+		{"users", "points INTEGER NOT NULL DEFAULT 0"},
+		{"users", "level INTEGER NOT NULL DEFAULT 1"},
+		{"users", "online_seconds INTEGER NOT NULL DEFAULT 0"},
 	}
-	for table, spec := range cols {
-		if hasColumn(conn, table, spec) {
+	for _, c := range addCols {
+		if hasColumn(conn, c.table, c.spec) {
 			continue
 		}
-		if _, err := conn.Exec(`ALTER TABLE ` + table + ` ADD COLUMN ` + spec); err != nil {
-			return fmt.Errorf("alter %s: %w", table, err)
+		if _, err := conn.Exec(`ALTER TABLE ` + c.table + ` ADD COLUMN ` + c.spec); err != nil {
+			return fmt.Errorf("alter %s: %w", c.table, err)
 		}
 	}
 	return nil
@@ -69,6 +75,8 @@ var schemaCore = []string{
   problem_count INTEGER DEFAULT 0,
   rank_no INTEGER DEFAULT 0,
   can_submit INTEGER DEFAULT 1,
+  points INTEGER NOT NULL DEFAULT 0,
+  level INTEGER NOT NULL DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   last_login_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`,

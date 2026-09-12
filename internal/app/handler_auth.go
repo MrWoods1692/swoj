@@ -55,6 +55,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	csrf := IssueCSRF(w)
 	_, _ = s.db.Exec(`UPDATE users SET last_login_at=datetime('now') WHERE id=?`, u.ID)
 	logOp(s.db, &Claims{UserID: u.ID, Role: u.Role}, "login", u.Username, "登录成功", ip)
+	s.refreshAchievements(u.ID)
 
 	OK(w, map[string]any{"token": claims, "csrf": csrf, "user": u,
 		"created_at": createdAt, "last_login_at": lastLogin})

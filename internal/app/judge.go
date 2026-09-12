@@ -447,5 +447,7 @@ func (j *Judge) writeResult(subID int64, r JudgeResult, p Problem) error {
 			ON CONFLICT(user_id, problem_id) DO UPDATE SET times = times + 1, last_try_at = datetime('now')`,
 			sub.UserID, p.ID, p.Name)
 	}
+	// 成就检测：任何提交（AC 或 WA）都可能触发首题/首 WA/AC 计数类成就。
+	_, _ = dbRefreshAchievements(j.db, sub.UserID)
 	return nil
 }

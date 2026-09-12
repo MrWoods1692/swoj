@@ -195,6 +195,7 @@ func (s *Server) discussionCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	id, _ := res.LastInsertId()
 	logOp(s.db, claims, "discussion_create", strconv.FormatInt(id, 10), req.Title, clientIP(r))
+	s.refreshAchievements(claims.UserID)
 	OK(w, map[string]any{"id": id})
 }
 

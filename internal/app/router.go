@@ -137,6 +137,7 @@ func NewRouter(s *Server) http.Handler {
 	pub("POST /api/auth/logout", s.logout)
 	// 登录态接口统一走鉴权中间件，避免公开路由误开。
 	pri("GET /api/auth/me", s.me)
+	pri("PUT /api/auth/me", s.profileUpdate)
 	pub("GET /api/problems", s.problemList)
 	pub("GET /api/problems/{id}", s.problemDetail)
 	pri("POST /api/submissions", s.submit)
@@ -215,6 +216,12 @@ func NewRouter(s *Server) http.Handler {
 	pri("POST /api/points/checkin", s.checkin)
 	pri("POST /api/points/online", s.onlineHeartbeat)
 	pri("GET /api/points/online", s.onlineSummary)
+
+	// 成就与等级
+	pub("GET /api/levels", s.levelTable)
+	pri("GET /api/achievements", s.achievements)
+	pri("GET /api/levels/me", s.levelMe)
+	pri("POST /api/levels/buy", s.levelBuy)
 
 	// 积分商城
 	pub("GET /api/shop", s.shopList)

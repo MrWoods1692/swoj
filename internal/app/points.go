@@ -17,12 +17,13 @@ var pointsLocation = func() *time.Location {
 
 // PointsCategory 积分流水的业务来源。
 const (
-	CategoryCheckin = "checkin"
-	CategoryAC      = "ac"
-	CategoryOnline  = "online"
-	CategoryContest = "contest"
-	CategoryAdmin   = "admin"
-	CategoryShop    = "shop"
+	CategoryCheckin  = "checkin"
+	CategoryAC       = "ac"
+	CategoryOnline   = "online"
+	CategoryContest  = "contest"
+	CategoryAdmin    = "admin"
+	CategoryShop     = "shop"
+	CategoryLevelBuy = "level_buy"
 )
 
 // signPoints 计算第 streak 天的签到积分：第 1 天给 base，之后每天 +bonus，上限 max。
@@ -143,6 +144,9 @@ func (s *Server) recordOnline(userID int64, seconds int) (int, error) {
 		return 0, nil
 	}
 	unit := s.cfg.Points.onlineUnitSeconds()
+
+	// 每日粒度的在线时长单独记录，供「连续在线 6 小时」成就判定；无条件写入。
+	s.recordOnlineDay(userID, seconds)
 
 	// 发放以「累计满档数 - 已发放数」为据，重复上报幂等；
 	// 多连接 + WAL 下单条 UPDATE 本身是原子的，不需要包裹事务。

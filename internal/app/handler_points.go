@@ -16,6 +16,7 @@ func (s *Server) checkin(w http.ResponseWriter, r *http.Request) {
 		Fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	s.refreshAchievements(claims.UserID)
 	OK(w, res)
 }
 
@@ -61,6 +62,7 @@ func (s *Server) onlineHeartbeat(w http.ResponseWriter, r *http.Request) {
 		Fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	s.refreshAchievements(claims.UserID)
 	balance, _ := s.userPoints(claims.UserID)
 	OK(w, map[string]any{"seconds": req.Seconds, "points": gain, "balance": balance})
 }

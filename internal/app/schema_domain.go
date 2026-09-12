@@ -159,6 +159,19 @@ var schemaPoints = []string{
   rule TEXT NOT NULL DEFAULT '{}',
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`,
+	`CREATE TABLE IF NOT EXISTS user_achievements (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  code TEXT NOT NULL UNIQUE,
+  unlocked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, code)
+)`,
+	`CREATE TABLE IF NOT EXISTS user_online_days (
+  user_id INTEGER NOT NULL,
+  date TEXT NOT NULL,
+  online_seconds INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY(user_id, date)
+)`,
 }
 
 // schemaOps 运维侧：测评节点、操作日志。

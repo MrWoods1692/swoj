@@ -15,6 +15,7 @@ type User struct {
 	ProblemCount int       `json:"problem_count"`
 	RankNo       int       `json:"rank_no"`
 	Points       int       `json:"points"`
+	Level        int       `json:"level"`
 	CanSubmit    bool      `json:"can_submit"`
 	CreatedAt    time.Time `json:"created_at"`
 	LastLoginAt  time.Time `json:"last_login_at"`
