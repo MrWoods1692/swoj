@@ -3,6 +3,7 @@ package app
 import (
 	"net/http"
 	"strconv"
+	"time"
 )
 
 // ProblemListResp 题库列表项。
@@ -85,9 +86,11 @@ func (s *Server) problemDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	var p Problem
 	err = s.db.QueryRow(`SELECT id, name, difficulty, problem_type, time_limit, mem_limit, file_limit,
-		stack_limit, open_data, show_tag, show_code, accept, submit, content, hint FROM problems WHERE id=?`, id).
+		stack_limit, open_data, show_tag, show_code, invisible, accept, submit, content, hint,
+		hint_time, created_at FROM problems WHERE id=?`, id).
 		Scan(&p.ID, &p.Name, &p.Difficulty, &p.ProblemType, &p.TimeLimit, &p.MemLimit, &p.FileLimit,
-			&p.StackLimit, &p.OpenData, &p.ShowTag, &p.ShowCode, &p.Accept, &p.Submit, &p.Content, &p.Hint)
+			&p.StackLimit, &p.OpenData, &p.ShowTag, &p.ShowCode, &p.Invisible, &p.Accept, &p.Submit,
+			&p.Content, &p.Hint, &p.HintTime, (*time.Time)(&p.CreatedAt))
 	if err != nil {
 		Fail(w, http.StatusNotFound, "题目不存在")
 		return

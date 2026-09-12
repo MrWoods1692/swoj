@@ -177,6 +177,35 @@ func NewRouter(s *Server) http.Handler {
 	pri("GET /api/wrong-questions", s.wrongQuestionList)
 	pri("DELETE /api/wrong-questions/{id}", s.wrongQuestionRemove)
 
+	// 服务状态（公开）与服务端健康检查
+	pub("GET /api/status", s.serviceStatus)
+
+	// 管理后台：题目管理
+	pri("POST /api/admin/problems", s.problemCreate)
+	pri("POST /api/admin/problems/{id}", s.problemUpdate)
+	pri("DELETE /api/admin/problems/{id}", s.problemDelete)
+
+	// 管理后台：测评节点与队列监控
+	pri("GET /api/admin/nodes", s.nodeList)
+	pri("POST /api/admin/nodes", s.nodeCreate)
+	pri("PUT /api/admin/nodes/{id}", s.nodeUpdate)
+	pri("DELETE /api/admin/nodes/{id}", s.nodeDelete)
+	pri("GET /api/admin/queue", s.queueStats)
+
+	// 管理后台：用户管理
+	pri("GET /api/admin/users", s.userList)
+	pri("PUT /api/admin/users/{id}", s.userUpdate)
+
+	// 管理后台：IP 封禁
+	pri("GET /api/admin/ip-blocks", s.ipBlockList)
+	pri("POST /api/admin/ip-blocks", s.ipBlockAdd)
+	pri("DELETE /api/admin/ip-blocks/{id}", s.ipBlockRemove)
+
+	// 管理后台：系统配置与操作日志
+	pri("GET /api/admin/config", s.configList)
+	pri("POST /api/admin/config", s.configSet)
+	pri("GET /api/admin/logs", s.opLogs)
+
 	// AI 问答与解析
 	pri("POST /api/ai/ask", s.aiAsk)
 	pri("GET /api/ai/history", s.aiHistory)

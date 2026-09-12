@@ -62,12 +62,26 @@ func requireClaims(w http.ResponseWriter, r *http.Request) (*Claims, bool) {
 }
 
 // requireAdmin 校验管理员角色；失败时写出 403 并返回 false。
+// 仅用于无需写操作日志的读接口；写接口请用 requireAdminClaims 以获取 claims。
 func requireAdmin(w http.ResponseWriter, claims *Claims) bool {
 	if !RequireRole(claims, "admin", "super", "superadmin") {
 		Fail(w, http.StatusForbidden, "需要管理员权限")
 		return false
 	}
 	return true
+}
+
+// requireAdminClaims 登录 + 管理员校验一步完成，供需要审计日志的写接口使用。
+func requireAdminClaims(w http.ResponseWriter, r *http.Request) (*Claims, bool) {
+	claims, ok := requireClaims(w, r)
+	if !ok {
+		return nil, false
+	}
+	if !RequireRole(claims, "admin", "super", "superadmin") {
+		Fail(w, http.StatusForbidden, "需要管理员权限")
+		return nil, false
+	}
+	return claims, true
 }
 
 // userByID 按 ID 读取用户，不包含密码字段。

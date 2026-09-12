@@ -3,42 +3,42 @@ package app
 import "time"
 
 type User struct {
-	ID           int64
-	Username     string
-	Password     string `json:"-"`
-	Email        string
-	RealName     string
-	Role         string
-	School       string
-	Avatar       string
-	Signature    string
-	ProblemCount int
-	RankNo       int
-	CanSubmit    bool
-	CreatedAt    time.Time
-	LastLoginAt  time.Time
+	ID           int64     `json:"id"`
+	Username     string    `json:"username"`
+	Password     string    `json:"-"`
+	Email        string    `json:"email"`
+	RealName     string    `json:"realname"`
+	Role         string    `json:"role"`
+	School       string    `json:"school"`
+	Avatar       string    `json:"avatar"`
+	Signature    string    `json:"signature"`
+	ProblemCount int       `json:"problem_count"`
+	RankNo       int       `json:"rank_no"`
+	CanSubmit    bool      `json:"can_submit"`
+	CreatedAt    time.Time `json:"created_at"`
+	LastLoginAt  time.Time `json:"last_login_at"`
 }
 
 type Problem struct {
-	ID           int64
-	Name         string
-	Difficulty   string
-	ProblemType  string
-	TimeLimit    int
-	MemLimit     int
-	FileLimit    int
-	StackLimit   int
-	OpenData     bool
-	ShowTag      bool
-	ShowCode     bool
-	Invisible    bool
-	Accept       int
-	Submit       int
-	AcceptedRate float64
-	Content      string
-	Hint         string
-	HintTime     int
-	CreatedAt    time.Time
+	ID           int64     `json:"id"`
+	Name         string    `json:"name"`
+	Difficulty   string    `json:"difficulty"`
+	ProblemType  string    `json:"problem_type"`
+	TimeLimit    int       `json:"time_limit"`
+	MemLimit     int       `json:"mem_limit"`
+	FileLimit    int       `json:"file_limit"`
+	StackLimit   int       `json:"stack_limit"`
+	OpenData     bool      `json:"open_data"`
+	ShowTag      bool      `json:"show_tag"`
+	ShowCode     bool      `json:"show_code"`
+	Invisible    bool      `json:"invisible"`
+	Accept       int       `json:"accept"`
+	Submit       int       `json:"submit"`
+	AcceptedRate float64   `json:"accept_rate"`
+	Content      string    `json:"content"`
+	Hint         string    `json:"hint"`
+	HintTime     int       `json:"hint_time"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type CaseIO struct {
