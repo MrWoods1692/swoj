@@ -128,4 +128,3 @@ func IssueCSRF(w http.ResponseWriter) string {
 	})
 	return tok
 }
-

@@ -37,11 +37,11 @@ type JudgeConfig struct {
 
 // AIConfig 配置 AI 问答/解析代理。APIKey 为空时返回「未配置」提示而非报错。
 type AIConfig struct {
-	Enabled    bool
-	APIURL     string
-	APIKey     string
-	Model      string
-	MaxTokens  int
+	Enabled     bool
+	APIURL      string
+	APIKey      string
+	Model       string
+	MaxTokens   int
 	Temperature float32
 }
 

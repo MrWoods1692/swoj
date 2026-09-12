@@ -80,18 +80,18 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 
 // SubmissionResp 提交记录响应。
 type SubmissionResp struct {
-	ID           int64   `json:"id"`
-	Username     string  `json:"username"`
-	ProblemID    int64   `json:"problem_id"`
-	ProblemName  string  `json:"problem_name"`
-	Mode         string  `json:"mode"`
-	Status       int     `json:"status"`
-	StatusText   string  `json:"status_text"`
-	TimeUsed     int     `json:"time_used"`
-	MemUsed      int     `json:"mem_used"`
-	ContestID    int64   `json:"contest_id"`
-	AssignmentID int64   `json:"assignment_id"`
-	CreatedAt    string  `json:"created_at"`
+	ID           int64  `json:"id"`
+	Username     string `json:"username"`
+	ProblemID    int64  `json:"problem_id"`
+	ProblemName  string `json:"problem_name"`
+	Mode         string `json:"mode"`
+	Status       int    `json:"status"`
+	StatusText   string `json:"status_text"`
+	TimeUsed     int    `json:"time_used"`
+	MemUsed      int    `json:"mem_used"`
+	ContestID    int64  `json:"contest_id"`
+	AssignmentID int64  `json:"assignment_id"`
+	CreatedAt    string `json:"created_at"`
 }
 
 // toResp 把提交行转成响应结构。

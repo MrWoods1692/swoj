@@ -5,7 +5,6 @@ import (
 	"fmt"
 )
 
-
 // migrate 创建全部数据表。按业务域拆分，便于独立演进。
 func migrate(conn *sql.DB) error {
 	schema := append([]string{}, schemaCore...)
@@ -21,7 +20,7 @@ func migrate(conn *sql.DB) error {
 
 // schemaCore 用户、题目、提交、测评。
 var schemaCore = []string{
-`CREATE TABLE IF NOT EXISTS users (
+	`CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
   password TEXT NOT NULL,
@@ -37,7 +36,7 @@ var schemaCore = []string{
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   last_login_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`,
-`CREATE TABLE IF NOT EXISTS problems (
+	`CREATE TABLE IF NOT EXISTS problems (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   difficulty TEXT DEFAULT 'Easy',
@@ -57,7 +56,7 @@ var schemaCore = []string{
   hint_time INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`,
-`CREATE TABLE IF NOT EXISTS cases (
+	`CREATE TABLE IF NOT EXISTS cases (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   problem_id INTEGER NOT NULL,
   index_no INTEGER NOT NULL,
@@ -65,11 +64,11 @@ var schemaCore = []string{
   output TEXT NOT NULL,
   UNIQUE(problem_id, index_no)
 )`,
-`CREATE TABLE IF NOT EXISTS tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)`,
-`CREATE TABLE IF NOT EXISTS problem_tags (
+	`CREATE TABLE IF NOT EXISTS tags (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE)`,
+	`CREATE TABLE IF NOT EXISTS problem_tags (
   problem_id INTEGER NOT NULL, tag_id INTEGER NOT NULL, PRIMARY KEY(problem_id, tag_id)
 )`,
-`CREATE TABLE IF NOT EXISTS submissions (
+	`CREATE TABLE IF NOT EXISTS submissions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
   username TEXT DEFAULT '',
@@ -86,7 +85,7 @@ var schemaCore = []string{
   error TEXT DEFAULT '',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`,
-`CREATE TABLE IF NOT EXISTS judge_nodes (
+	`CREATE TABLE IF NOT EXISTS judge_nodes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
   status INTEGER DEFAULT 0,

@@ -8,6 +8,7 @@ import (
 
 	_ "modernc.org/sqlite"
 )
+
 // DB 封装 SQLite 连接与建表。
 type DB struct {
 	conn *sql.DB

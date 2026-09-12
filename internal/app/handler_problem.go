@@ -7,14 +7,14 @@ import (
 
 // ProblemListResp 题库列表项。
 type ProblemListResp struct {
-	ID           int64   `json:"id"`
-	Name         string  `json:"name"`
-	Difficulty   string  `json:"difficulty"`
-	TimeLimit    int     `json:"time_limit"`
-	MemLimit     int     `json:"mem_limit"`
-	Accept       int     `json:"accept"`
-	Submit       int     `json:"submit"`
-	AcceptedRate float64 `json:"accept_rate"`
+	ID           int64    `json:"id"`
+	Name         string   `json:"name"`
+	Difficulty   string   `json:"difficulty"`
+	TimeLimit    int      `json:"time_limit"`
+	MemLimit     int      `json:"mem_limit"`
+	Accept       int      `json:"accept"`
+	Submit       int      `json:"submit"`
+	AcceptedRate float64  `json:"accept_rate"`
 	Tags         []string `json:"tags"`
 }
 

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -24,6 +25,7 @@ const (
 	StatusPE         = 7
 	StatusSE         = 8
 )
+
 // StatusText 状态中文描述。
 var StatusText = map[int]string{
 	StatusAccepted:   "通过",
@@ -47,10 +49,13 @@ type JudgeResult struct {
 
 // Judge 测评器：编译 C++ 源码并逐用例执行，资源限制通过 rlimit 施加。
 type Judge struct {
-	db      *DB
-	cfg     *JudgeConfig
-	pool    chan struct{}
-	baseDir string
+	db       *DB
+	cfg      *JudgeConfig
+	pool     chan struct{}
+	baseDir  string
+	wrapOnce sync.Once
+	wrapPath string
+	wrapErr  error
 }
 
 // NewJudge 创建测评器。
@@ -133,10 +138,10 @@ func (j *Judge) eval(subDir, srcPath string, p Problem) (JudgeResult, error) {
 		_ = os.Remove(outPath)
 
 		fsizeKB := p.FileLimit
-	if fsizeKB <= 0 {
-		fsizeKB = 64
-	}
-	r, err := j.execute(binPath, outPath, subDir, tl, memoryKB, fsizeKB)
+		if fsizeKB <= 0 {
+			fsizeKB = 64
+		}
+		r, err := j.execute(binPath, outPath, subDir, tl, memoryKB, fsizeKB)
 		if err != nil {
 			return JudgeResult{Status: StatusRE, Message: "运行时错误"}, nil
 		}
@@ -165,7 +170,7 @@ func (j *Judge) eval(subDir, srcPath string, p Problem) (JudgeResult, error) {
 
 // compile 编译 C++ 源码。
 func (j *Judge) compile(src, bin string) (string, error) {
-	cmd := exec.Command("g++", "-O2", "-std=c++17", "-static", "-o", bin, src)
+	cmd := exec.Command("g++", "-O2", "-std=c++17", "-w", "-o", bin, src)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }
@@ -191,8 +196,15 @@ func (j *Judge) execute(bin, outPath, workDir string, tl time.Duration, memKB, f
 	cmd := exec.Command(wrap, fmt.Sprintf("%d", ms), fmt.Sprintf("%d", memKB),
 		fmt.Sprintf("%d", fsizeKB), bin)
 	cmd.Dir = workDir
-	cmd.Stdin, _ = os.Open(filepath.Join(workDir, "input.txt"))
-	cmd.Env = append(os.Environ(), "SWOJ_OUT="+outPath)
+	inFile, err := os.Open(filepath.Join(workDir, "input.txt"))
+	if err != nil {
+		return execResult{}, err
+	}
+	cmd.Stdin = inFile
+	cmd.Env = append(os.Environ(),
+		"SWOJ_OUT="+outPath,
+		"SWOJ_IN="+filepath.Join(workDir, "input.txt"))
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	// 包装器把「CPU耗时 峰值内存」写到 stderr，stdout 留给用户程序经 SWOJ_OUT 落盘。
 	var errBuf bytes.Buffer
@@ -205,17 +217,24 @@ func (j *Judge) execute(bin, outPath, workDir string, tl time.Duration, memKB, f
 	})
 	err = cmd.Run()
 	tlEnd.Stop()
+	_ = inFile.Close()
 
+	res := execResult{ExitCode: 0}
 	if err != nil {
 		if ee, ok := err.(*exec.ExitError); ok {
-			res := execResult{ExitCode: ee.ProcessState.ExitCode()}
-			j.parseStats(errBuf.Bytes(), &res)
-			return res, nil
+			res.ExitCode = ee.ProcessState.ExitCode()
+		} else {
+			return execResult{}, err
 		}
-		return execResult{}, err
 	}
-	res := execResult{ExitCode: 0}
 	j.parseStats(errBuf.Bytes(), &res)
+	// 152 = 128 + SIGXCPU(24)：RLIMIT_CPU 耗尽，语义上就是 CPU 超时，
+	// 必须判为 TLE 而不是笼统的运行时错误。
+	// 152 = 128 + SIGXCPU(24)：RLIMIT_CPU 耗尽，语义上就是 CPU 超时。
+	// 137/143 分别是 Go 侧看门狗发出的 SIGKILL/SIGTERM 兜底回收。
+	if res.ExitCode == 128+24 || res.ExitCode == 137 || res.ExitCode == 143 {
+		res.TLE = true
+	}
 	return res, nil
 }
 
@@ -233,17 +252,17 @@ func (j *Judge) parseStats(out []byte, res *execResult) {
 // RLIMIT_CPU / RLIMIT_AS / RLIMIT_FSIZE，并收集子进程 CPU 与峰值内存。
 // 原因：本环境无 cgroup 写权限，进程级 rlimit 是唯一可靠的资源隔离手段。
 const wrapperSource = `
+#define _GNU_SOURCE
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <signal.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <errno.h>
 
 int main(int argc, char **argv) {
     if (argc < 5) return 97;
@@ -251,14 +270,16 @@ int main(int argc, char **argv) {
     long mem_kb = atol(argv[2]);
     long fsize_kb = atol(argv[3]);
     char *bin = argv[4];
+
     int outfd = -1;
     char *outp = getenv("SWOJ_OUT");
     if (outp) outfd = open(outp, O_WRONLY|O_CREAT|O_TRUNC, 0644);
     if (outfd < 0) outfd = 1;
+    // 只接管 stdout：stderr 必须留给包装器回传「CPU 峰值内存」统计，
+    // 否则 Go 侧的 cmd.Stderr 永远收不到统计行。
     dup2(outfd, 1);
-    dup2(outfd, 2);
 
-    struct rlimit cpu = { cpu_ms/1000+1, cpu_ms/1000+2 };
+    struct rlimit cpu = { cpu_ms/1000, cpu_ms/1000 };
     struct rlimit as  = { (rlim_t)mem_kb*1024, (rlim_t)mem_kb*1024 };
     struct rlimit fs  = { (rlim_t)fsize_kb*1024, (rlim_t)fsize_kb*1024 };
     setrlimit(RLIMIT_CPU, &cpu);
@@ -266,42 +287,66 @@ int main(int argc, char **argv) {
     setrlimit(RLIMIT_FSIZE, &fs);
     setrlimit(RLIMIT_NOFILE, &(struct rlimit){128,128});
 
-    // 子进程直接把输出文件描述符接管为 1/2 并 exec 用户程序；
-    // 父进程保留同一描述符用于后续关闭，避免双持有导致的缓冲区错位。
     pid_t pid = fork();
     if (pid == 0) {
         setsid();
-        int infd = open("/dev/null", O_RDONLY);
-        dup2(infd, 0);
-        close(infd);
+        char *inp = getenv("SWOJ_IN");
+        if (inp) {
+            int infd = open(inp, O_RDONLY);
+            if (infd >= 0) { dup2(infd, 0); close(infd); }
+        }
+        for (int fd = 3; fd < 64; fd++) close(fd);
         execv(bin, &argv[4]);
         _exit(127);
     }
-    struct rusage ru; getrusage(RUSAGE_CHILDREN, &ru);
-    long cpu_used = ru.ru_utime.tv_sec*1000 + ru.ru_utime.tv_usec/1000;
-    cpu_used += ru.ru_stime.tv_sec*1000 + ru.ru_stime.tv_usec/1000;
-    fprintf(stderr, "%ld %ld", cpu_used, ru.ru_maxrss);
+
+    struct timespec t0, t1;
+    clock_gettime(CLOCK_MONOTONIC, &t0);
+    int status;
+    waitpid(pid, &status, 0);
+    clock_gettime(CLOCK_MONOTONIC, &t1);
+    if (outfd >= 0) close(outfd);
+
+    long cpu_used = (t1.tv_sec - t0.tv_sec) * 1000 +
+                    (t1.tv_nsec - t0.tv_nsec) / 1000000;
+    struct rusage ru;
+    getrusage(RUSAGE_CHILDREN, &ru);
+    long mem_used = ru.ru_maxrss;
+
+    // 统计必须走真实 stderr：stdout 已被 dup2 到输出文件，
+    // 而 Go 侧的 cmd.Stderr 是包装器自身未重定向的错误流。
+    FILE *errf = fdopen(2, "w");
+    if (errf) {
+        fprintf(errf, "%ld %ld", cpu_used, mem_used);
+        fclose(errf);
+    } else {
+        dprintf(2, "%ld %ld", cpu_used, mem_used);
+    }
+
     if (WIFEXITED(status)) return WEXITSTATUS(status);
     if (WIFSIGNALED(status)) return 128 + WTERMSIG(status);
     return 97;
 }
 `
 
-// compileWrapper 编译一次 C 包装器并缓存到 baseDir。
+// compileWrapper 编译 C 包装器。用 sync.Once 保证整个进程只编译一次：
+// 多个 worker 并发判题时若各自编译，会同时写同一文件导致包装器损坏。
 func (j *Judge) compileWrapper() (string, error) {
-	wrap := filepath.Join(j.baseDir, "wrapper.c")
-	bin := filepath.Join(j.baseDir, "wrapper")
-	if _, err := os.Stat(bin); err == nil {
-		return bin, nil
-	}
-	if err := os.WriteFile(wrap, []byte(wrapperSource), 0o644); err != nil {
-		return "", err
-	}
-	cmd := exec.Command("gcc", "-O2", "-o", bin, wrap)
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("build wrapper: %v %s", err, out)
-	}
-	return bin, nil
+	j.wrapOnce.Do(func() {
+		wrap := filepath.Join(j.baseDir, "wrapper.c")
+		bin := filepath.Join(j.baseDir, "wrapper")
+		if err := os.WriteFile(wrap, []byte(wrapperSource), 0o644); err != nil {
+			j.wrapErr = fmt.Errorf("write wrapper: %w", err)
+			return
+		}
+		cmd := exec.Command("gcc", "-O2", "-std=gnu99", "-o", bin, wrap)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			j.wrapErr = fmt.Errorf("build wrapper: %v %s", err, out)
+			return
+		}
+		j.wrapPath = bin
+	})
+	return j.wrapPath, j.wrapErr
 }
 
 // loadProblem 读取题目及其资源限制。
@@ -344,8 +389,8 @@ func (j *Judge) writeResult(subID int64, r JudgeResult, p Problem) error {
 	}
 	_ = j.db.QueryRow(`SELECT user_id, username FROM submissions WHERE id=?`, subID).Scan(&sub.UserID, &sub.Name)
 
-	_, err := j.db.Exec(`UPDATE submissions SET status=?, msg=?, time_used=?, mem_used=? WHERE id=?`,
-		r.Status, r.Message, r.TimeUsed, r.MemUsed, subID)
+	_, err := j.db.Exec(`UPDATE submissions SET status=?, msg=?, time_used=?, mem_used=?, error=? WHERE id=?`,
+		r.Status, r.Message, r.TimeUsed, r.MemUsed, r.CompileLog, subID)
 	if err != nil {
 		return err
 	}
