@@ -4,10 +4,12 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 // Config 汇总全部运行配置。字段均可通过环境变量覆盖，未设置的取生产默认值。
+// Judge 的资源限制会由管理员在运行中调整，读写经过 JudgeConfig 自己的锁。
 type Config struct {
 	ListenAddr string
 	DataDir    string
@@ -24,6 +26,52 @@ type Config struct {
 	Levels []LevelTier
 	// Campux OAuth 登录。密钥可由管理员控制台写入 admin_configs 覆盖，无需发版即可更换。
 	OAuth OAuthConfig
+}
+
+// JudgeSnapshot 与 JudgeConfig 同构但不含锁，供并发安全的读取拷贝。
+type JudgeSnapshot struct {
+	Workers      int
+	PoolSize     int
+	QueueSize    int
+	UserTimeout  time.Duration
+	UserMemLimit int
+	MemExtra     int
+	CGrouPMount  string
+	JudgeBin     string
+}
+
+// LimitsView 当前生效的资源限制快照。
+type LimitsView struct {
+	UserTimeoutMS int
+	MemLimitMB    int
+	MemExtra      int
+}
+
+// Limits 返回当前生效的资源限制，供每次判题读取。
+func (j *JudgeConfig) Limits() LimitsView {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	return LimitsView{
+		UserTimeoutMS: int(j.UserTimeout.Seconds() * 1000),
+		MemLimitMB:    j.UserMemLimit,
+		MemExtra:      j.MemExtra,
+	}
+}
+
+// TimeoutAndExtra 返回判题用超时与附加内存开销（毫秒 / MB）。
+func (j *JudgeConfig) TimeoutAndExtra() (time.Duration, int) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	return j.UserTimeout, j.MemExtra
+}
+
+// SetLimits 原子更新资源限制。
+func (j *JudgeConfig) SetLimits(timeout time.Duration, memLimit, memExtra int) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.UserTimeout = timeout
+	j.UserMemLimit = memLimit
+	j.MemExtra = memExtra
 }
 
 // PointsConfig 积分规则：可通过环境变量覆盖，未配置取默认值。
@@ -87,7 +135,9 @@ func (c *OAuthConfig) OAuthCallbackURL() string {
 }
 
 // JudgeConfig 控制测评服务：进程池规模、单用例资源限制与本地 judge 二进制路径。
+// mu 保护会被管理员在运行中修改的数值字段，判题路径与保存接口都要经过它。
 type JudgeConfig struct {
+	mu           sync.Mutex
 	Workers      int
 	PoolSize     int
 	QueueSize    int
@@ -96,6 +146,22 @@ type JudgeConfig struct {
 	MemExtra     int // MB，编译/栈/库开销，计入 cgroup memory.max
 	CGrouPMount  string
 	JudgeBin     string // 为空则使用内置执行器
+}
+
+// Snapshot 返回当前配置的安全拷贝，供只读视图使用。
+func (j *JudgeConfig) Snapshot() JudgeSnapshot {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	return JudgeSnapshot{
+		Workers:      j.Workers,
+		PoolSize:     j.PoolSize,
+		QueueSize:    j.QueueSize,
+		UserTimeout:  j.UserTimeout,
+		UserMemLimit: j.UserMemLimit,
+		MemExtra:     j.MemExtra,
+		CGrouPMount:  j.CGrouPMount,
+		JudgeBin:     j.JudgeBin,
+	}
 }
 
 // AIConfig 配置 AI 问答/解析代理。APIKey 为空时返回「未配置」提示而非报错。

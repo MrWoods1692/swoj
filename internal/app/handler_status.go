@@ -87,6 +87,7 @@ type NodeInfo struct {
 	Running     int    `json:"running"`
 	CreatedAt   string `json:"created_at"`
 	LastSeen    string `json:"last_seen"`
+	AgeSeconds  int64  `json:"age_seconds"`
 }
 
 // StatusResp 服务状态响应，公开接口。

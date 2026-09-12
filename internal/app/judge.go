@@ -61,16 +61,17 @@ type Judge struct {
 
 // NewJudge 创建测评器。
 func NewJudge(db *DB, cfg *JudgeConfig, points *PointsConfig, baseDir string) *Judge {
-	if cfg.UserMemLimit <= 0 {
-		cfg.UserMemLimit = 256
+	seed := cfg.Snapshot()
+	if seed.UserMemLimit <= 0 {
+		seed.UserMemLimit = 256
 	}
-	if cfg.UserTimeout <= 0 {
-		cfg.UserTimeout = 1 * time.Second
+	if seed.UserTimeout <= 0 {
+		seed.UserTimeout = 1 * time.Second
 	}
 	if points == nil {
 		points = DefaultPointsConfig()
 	}
-	return &Judge{db: db, cfg: cfg, points: points, pool: make(chan struct{}, cfg.PoolSize), baseDir: baseDir}
+	return &Judge{db: db, cfg: cfg, points: points, pool: make(chan struct{}, seed.PoolSize), baseDir: baseDir}
 }
 
 // Run 测评一条提交：编译 → 逐用例执行 → 写回状态。
@@ -122,11 +123,12 @@ func (j *Judge) eval(subDir, srcPath string, p Problem) (JudgeResult, error) {
 		return JudgeResult{}, err
 	}
 
+	lim := j.cfg.Limits()
 	tl := time.Duration(p.TimeLimit) * time.Millisecond
 	if tl <= 0 {
-		tl = j.cfg.UserTimeout
+		tl = time.Duration(lim.UserTimeoutMS) * time.Millisecond
 	}
-	memoryKB := p.MemLimit*1024 + j.cfg.MemExtra*1024
+	memoryKB := p.MemLimit*1024 + lim.MemExtra*1024
 	if memoryKB <= 0 {
 		memoryKB = 256 * 1024
 	}

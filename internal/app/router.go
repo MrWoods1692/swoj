@@ -2,7 +2,6 @@ package app
 
 import (
 	"net/http"
-	"strings"
 )
 
 // HandlerFunc 处理器签名，便于组合中间件。
@@ -24,8 +23,8 @@ type authMiddleware struct{ s *Server }
 
 func (m authMiddleware) Wrap(next HandlerFunc) HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		token, err := m.token(r)
-		if err != nil || token == "" {
+		token := bearerToken(r)
+		if token == "" {
 			Fail(w, http.StatusUnauthorized, "请先登录")
 			return
 		}
@@ -36,18 +35,6 @@ func (m authMiddleware) Wrap(next HandlerFunc) HandlerFunc {
 		}
 		next(w, AuthContext(r, claims))
 	}
-}
-
-// token 从 Authorization 头或 Cookie 读取令牌。
-func (m authMiddleware) token(r *http.Request) (string, error) {
-	if h := r.Header.Get("Authorization"); strings.HasPrefix(h, "Bearer ") {
-		return strings.TrimSpace(h[len("Bearer "):]), nil
-	}
-	c, err := r.Cookie("swoj_token")
-	if err != nil {
-		return "", nil
-	}
-	return c.Value, nil
 }
 
 // csrfMiddleware 对变更类请求校验 CSRF。
@@ -139,6 +126,9 @@ func NewRouter(s *Server) http.Handler {
 	// 登录态接口统一走鉴权中间件，避免公开路由误开。
 	pri("GET /api/auth/me", s.me)
 	pri("PUT /api/auth/me", s.profileUpdate)
+	// 协议与隐私政策：版本比对 + 记录同意时间，前端据此弹出确认框。
+	pub("GET /api/terms", s.termsInfo)
+	pri("POST /api/terms/accept", s.termsAccept)
 	// 公开个人主页：任何访客可查看，前端外链 /profile/{id} 直接渲染此数据。
 	pub("GET /api/users/{id}/homepage", s.userHomepage)
 	// 收藏：题目与训练计划共用一组端点，type 为 problem 或 plan。
@@ -152,6 +142,15 @@ func NewRouter(s *Server) http.Handler {
 	pri("POST /api/admin/notices", s.noticeCreate)
 	pri("PUT /api/admin/notices/{id}", s.noticeUpdate)
 	pri("DELETE /api/admin/notices/{id}", s.noticeDelete)
+
+	// 资料：公开只读 + 元数据；增删改仅老师与管理员（handler 内 requireEditorClaims 校验）。
+	pub("GET /api/materials/meta", s.materialsMeta)
+	pub("GET /api/materials", s.materialsList)
+	pub("GET /api/materials/{id}", s.materialDetail)
+	pri("GET /api/admin/materials", s.materialsAdminList)
+	pri("POST /api/admin/materials", s.materialCreate)
+	pri("PUT /api/admin/materials/{id}", s.materialUpdate)
+	pri("DELETE /api/admin/materials/{id}", s.materialDelete)
 	pub("GET /api/problems", s.problemList)
 	pub("GET /api/problems/{id}", s.problemDetail)
 	pri("POST /api/submissions", s.submit)
@@ -192,8 +191,11 @@ func NewRouter(s *Server) http.Handler {
 	pri("GET /api/wrong-questions", s.wrongQuestionList)
 	pri("DELETE /api/wrong-questions/{id}", s.wrongQuestionRemove)
 
-	// 服务状态（公开）与服务端健康检查
+	// 服务状态（公开）与测评机实时状态/配置参数展示，服务端健康检查
 	pub("GET /api/status", s.serviceStatus)
+	pub("GET /api/judge/info", s.judgeInfo)
+	pri("GET /api/admin/judge/config", s.judgeConfigGet)
+	pri("PUT /api/admin/judge/config", s.judgeConfigSet)
 
 	// 全站统计：公开概览供首页，明细面板限管理员。
 	pub("GET /api/stats/site", s.statsSite)
