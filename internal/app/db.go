@@ -14,7 +14,8 @@ type DB struct {
 	conn *sql.DB
 }
 
-// OpenDB 打开数据库并按需创建表结构，同时写入默认管理员与内置题目。
+// OpenDB 打开数据库并按需创建表结构，同时写入内置测评节点与题目。
+// 不种子任何账号：首位完成校园墙授权的用户自动成为管理员。
 func OpenDB(dataDir string, cfg *Config) (*DB, error) {
 	if err := os.MkdirAll(dataDir, 0o755); err != nil {
 		return nil, fmt.Errorf("create data dir: %w", err)
@@ -36,7 +37,7 @@ func OpenDB(dataDir string, cfg *Config) (*DB, error) {
 	if err := migrate(conn); err != nil {
 		return nil, err
 	}
-	if err := seed(conn, cfg); err != nil {
+	if err := seed(conn); err != nil {
 		return nil, fmt.Errorf("seed: %w", err)
 	}
 	return &DB{conn: conn}, nil

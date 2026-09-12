@@ -3,10 +3,10 @@ package app
 import (
 	"database/sql"
 	"fmt"
-	"strings"
 )
 
 // migrate 创建全部数据表。按业务域拆分，便于独立演进。
+// 项目未部署，不存在历史库：schema 变更直接改 CREATE，不做 ALTER 兼容。
 func migrate(conn *sql.DB) error {
 	schema := append([]string{}, schemaCore...)
 	schema = append(schema, schemaDomain...)
@@ -17,50 +17,7 @@ func migrate(conn *sql.DB) error {
 			return fmt.Errorf("create table: %w", err)
 		}
 	}
-	return ensureColumns(conn)
-}
-
-// ensureColumns 给已存在的旧表补上新增列。SQLite 不支持 IF NOT EXISTS，需先查列。
-// 用切片而非 map，允许同一张表补多列。
-func ensureColumns(conn *sql.DB) error {
-	addCols := []struct {
-		table string
-		spec  string
-	}{
-		{"users", "points INTEGER NOT NULL DEFAULT 0"},
-		{"users", "level INTEGER NOT NULL DEFAULT 1"},
-		{"users", "online_seconds INTEGER NOT NULL DEFAULT 0"},
-		{"users", "oauth_provider TEXT NOT NULL DEFAULT ''"},
-		{"users", "oauth_id TEXT NOT NULL DEFAULT ''"},
-		{"users", "oauth_name TEXT NOT NULL DEFAULT ''"},
-	}
-	for _, c := range addCols {
-		if hasColumn(conn, c.table, c.spec) {
-			continue
-		}
-		if _, err := conn.Exec(`ALTER TABLE ` + c.table + ` ADD COLUMN ` + c.spec); err != nil {
-			return fmt.Errorf("alter %s: %w", c.table, err)
-		}
-	}
 	return nil
-}
-
-// hasColumn 判断表中是否已有该列。从 ALTER 语句里取列名。
-func hasColumn(conn *sql.DB, table, addCol string) bool {
-	name := strings.Fields(addCol)[0]
-	var got string
-	rows, err := conn.Query(`SELECT name FROM pragma_table_info(?)`, table)
-	if err != nil {
-		return false
-	}
-	defer rows.Close()
-	for rows.Next() {
-		_ = rows.Scan(&got)
-		if got == name {
-			return true
-		}
-	}
-	return false
 }
 
 // schemaCore 用户、题目、提交、测评。
@@ -68,23 +25,23 @@ var schemaCore = []string{
 	`CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   username TEXT NOT NULL UNIQUE,
-  password TEXT NOT NULL,
   email TEXT DEFAULT '',
   realname TEXT DEFAULT '',
-  role TEXT DEFAULT 'guest',
+  role TEXT DEFAULT 'user',
   school TEXT DEFAULT '',
   avatar TEXT DEFAULT '',
   signature TEXT DEFAULT '',
-  oauth_provider TEXT DEFAULT '',
-  oauth_id TEXT DEFAULT '',
+  oauth_provider TEXT NOT NULL DEFAULT '',
+  oauth_id TEXT NOT NULL DEFAULT '',
   oauth_name TEXT DEFAULT '',
   problem_count INTEGER DEFAULT 0,
   rank_no INTEGER DEFAULT 0,
-  can_submit INTEGER DEFAULT 1,
+  can_submit INTEGER DEFAULT 0,
   points INTEGER NOT NULL DEFAULT 0,
   level INTEGER NOT NULL DEFAULT 1,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  last_login_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  last_login_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(oauth_provider, oauth_id)
 )`,
 	`CREATE TABLE IF NOT EXISTS problems (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

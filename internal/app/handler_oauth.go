@@ -14,8 +14,9 @@ import (
 	"time"
 )
 
-// Campux OAuth 登录。用户不能自助注册：唯一入口是校园墙授权，首次授权后自动创建账号，
-// 但账号处于未完善资料状态，补全姓名与个人主页后才算完成注册并解锁提交权限。
+// Campux OAuth 登录。账号只能通过校园墙授权建立：首次授权自动创建账号；
+// 库里第一个完成授权的账号自动成为管理员（role=super），其余为普通用户。
+// 新账号处于未完善资料状态（can_submit=0），补全姓名与个人主页后才算完成注册并解锁提交。
 const oauthProvider = "campux"
 
 // 真实姓名必须是 3-4 个汉字，与「完善个人主页」的判定口径一致。
@@ -186,26 +187,32 @@ func (s *Server) oauthIssue(w http.ResponseWriter, r *http.Request, username, qq
 	_ = s.db.QueryRow(`SELECT id, role FROM users WHERE oauth_provider=? AND oauth_id=?`,
 		oauthProvider, qq).Scan(&id, &role)
 	if id == 0 {
+		// 库里还没有任何校园墙账号 → 本次登录者是首位，直接授予管理员；
+		// 按 OAuth 绑定数而非 super 数判定，避免遗留密码账号占住管理员位。
+		var bound int
+		_ = s.db.QueryRow(`SELECT COUNT(*) FROM users WHERE oauth_provider<>''`).Scan(&bound)
+		if bound == 0 {
+			role = "super"
+		} else {
+			role = "user"
+		}
 		var n int
 		_ = s.db.QueryRow(`SELECT COUNT(*) FROM users WHERE username=?`, username).Scan(&n)
 		if n > 0 {
 			// 用户名已被占用：用 OAuth ID 生成不冲突的账号名，保证建号不因重名失败。
 			username = "campux_" + qq
 		}
-		res, err := s.db.Exec(`INSERT INTO users(username, password, oauth_provider, oauth_id, oauth_name, role, can_submit)
-			VALUES(?,?,?,?,?,?,0)`, username, "", oauthProvider, qq, username, "user")
+		res, err := s.db.Exec(`INSERT INTO users(username, oauth_provider, oauth_id, oauth_name, role, can_submit)
+			VALUES(?,?,?,?,?,0)`, username, oauthProvider, qq, username, role)
 		if err != nil {
-			// 并发首次登录：按用户名回查，避免重复建号。
-			if err2 := s.db.QueryRow(`SELECT id, role FROM users WHERE username=?`, username).Scan(&id, &role); err2 == nil {
-				_, _ = s.db.Exec(`UPDATE users SET oauth_provider=?, oauth_id=?, oauth_name=? WHERE id=?`,
-					oauthProvider, qq, username, id)
-			} else {
+			// 并发首次登录：按 OAuth 绑定回查，避免重复建号。
+			if err2 := s.db.QueryRow(`SELECT id, role FROM users WHERE oauth_provider=? AND oauth_id=?`,
+				oauthProvider, qq).Scan(&id, &role); err2 != nil {
 				Fail(w, http.StatusInternalServerError, "创建账号失败")
 				return
 			}
 		} else {
 			id, _ = res.LastInsertId()
-			role = "user"
 		}
 	}
 

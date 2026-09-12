@@ -17,9 +17,6 @@ type Config struct {
 	JWTSecret string
 	JWTLife   time.Duration
 
-	AdminUser string
-	AdminPass string
-
 	Judge  JudgeConfig
 	AI     AIConfig
 	Points *PointsConfig
@@ -120,8 +117,6 @@ func LoadConfig() *Config {
 		HostURL:    envStr("SWOJ_HOST", "http://localhost:8080"),
 		JWTSecret:  envStr("SWOJ_SECRET", "swoj-dev-secret-change-me"),
 		JWTLife:    envDuration("SWOJ_TOKEN_LIFE", 24*time.Hour),
-		AdminUser:  envStr("SWOJ_ADMIN_USER", "admin"),
-		AdminPass:  envStr("SWOJ_ADMIN_PASS", "admin123"),
 
 		Judge: JudgeConfig{
 			Workers:      envInt("SWOJ_JUDGE_WORKERS", 2),

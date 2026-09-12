@@ -1,34 +1,19 @@
 package app
 
-import (
-	"database/sql"
-	"fmt"
-)
+import "database/sql"
 
-// seed 首次启动时写入默认管理员与内置题目。
-func seed(conn *sql.DB, cfg *Config) error {
+// seed 首次启动时写入内置测评节点与题目。
+// 系统不存在任何口令账号：管理员由首位完成校园墙授权的用户自动晋升（见 handler_oauth.go）。
+func seed(conn *sql.DB) error {
+	// 以测评节点为幂等标记：不再种子任何用户，不能用 users 计数判首启。
 	var n int
-	if err := conn.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&n); err != nil {
+	if err := conn.QueryRow(`SELECT COUNT(*) FROM judge_nodes`).Scan(&n); err != nil {
 		return err
 	}
 	if n > 0 {
 		return nil
 	}
-
-	adminHash, err := hashPassword(cfg.AdminPass)
-	if err != nil {
-		return fmt.Errorf("hash admin: %w", err)
-	}
-	if _, err := conn.Exec(`INSERT INTO users(username,password,email,role,school) VALUES(?,?,?,?,?)`,
-		cfg.AdminUser, adminHash, "admin@swoj.local", "super", "Swoj Academy"); err != nil {
-		return err
-	}
-
-	// 注册业务已下线，普通用户只能由校园墙 OAuth 首次登录时建号，
-	// 因此不再种子任何带口令的演示账号（否则会成为无法登录的死账号）。
-
-	_, err = conn.Exec(`INSERT INTO judge_nodes(name,status,accept_count,judge_type) VALUES('builtin',0,0,'cpp')`)
-	if err != nil {
+	if _, err := conn.Exec(`INSERT INTO judge_nodes(name,status,accept_count,judge_type) VALUES('builtin',0,0,'cpp')`); err != nil {
 		return err
 	}
 

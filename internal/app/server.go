@@ -5,8 +5,6 @@ type Server struct {
 	cfg *Config
 	db  *DB
 
-	RateLimiter *RateLimiter
-
 	AI    *AIConfig
 	Judge *JudgeConfig
 	Queue *JudgeQueue

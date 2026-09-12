@@ -132,10 +132,8 @@ func NewRouter(s *Server) http.Handler {
 	pub("GET /api/csrf", func(w http.ResponseWriter, r *http.Request) {
 		OK(w, map[string]any{"csrf": IssueCSRF(w)})
 	})
-	pub("POST /api/auth/login", s.login)
+	// 密码登录已全部下线：登录只走校园墙授权，首位完成授权的用户自动成为管理员。
 	pub("POST /api/auth/logout", s.logout)
-	// 校园墙 OAuth：唯一登录入口。注册业务已下线，首次授权自动建号。
-	// 走同一中间件链（recovery/cors/ipBlock/csrf），但均为 GET，CSRF 中间件放行。
 	pub("GET /auth/campux", s.oauthAuthorize)
 	pub("GET "+oauthCallbackPath, s.oauthCallback)
 	// 登录态接口统一走鉴权中间件，避免公开路由误开。

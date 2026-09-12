@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -135,4 +137,11 @@ func IssueCSRF(w http.ResponseWriter) string {
 		Path: "/", MaxAge: 86400, HttpOnly: false, SameSite: http.SameSiteLaxMode,
 	})
 	return tok
+}
+
+// hexID 生成短随机十六进制标识，用于 CSRF 令牌、OAuth state 等一次性凭据。
+func hexID() string {
+	b := make([]byte, 12)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
 }
