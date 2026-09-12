@@ -192,8 +192,15 @@ func NewRouter(s *Server) http.Handler {
 	pri("GET /api/auth/me/stats", s.myStats)
 
 	// 错题本
-	pri("GET /api/wrong-questions", s.wrongQuestionList)
-	pri("DELETE /api/wrong-questions/{id}", s.wrongQuestionRemove)
+		pri("GET /api/wrong-questions", s.wrongQuestionList)
+		pri("DELETE /api/wrong-questions/{id}", s.wrongQuestionRemove)
+
+		// 个人笔记：仅本人可见的私密备忘
+		pri("GET /api/notes", s.noteList)
+		pri("POST /api/notes", s.noteCreate)
+		pri("GET /api/notes/{id}", s.noteDetail)
+		pri("PUT /api/notes/{id}", s.noteUpdate)
+		pri("DELETE /api/notes/{id}", s.noteDelete)
 
 	// 服务状态（公开）与测评机实时状态/配置参数展示，服务端健康检查
 	pub("GET /api/status", s.serviceStatus)

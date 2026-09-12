@@ -8,14 +8,16 @@ const dict = {
     status: '服务状态', about: '关于', changelog: '更新日志',
     admin: '管理后台', profile: '个人主页', login: '校园墙登录', logout: '退出', mine: '我的',
     logs: '日志',
-    ai: 'AI 问答', queue: '测评队列', terms: '用户协议', privacy: '隐私政策' },
+    ai: 'AI 问答', queue: '测评队列', terms: '用户协议', privacy: '隐私政策',
+    notes: '笔记' },
   en: { home: 'Home', problems: 'Problems', training: 'Training', contests: 'Contests', assignments: 'Assignments',
     discussions: 'Discuss', submissions: 'Submissions', leaderboard: 'Ranking', wrong: 'Wrong List', points: 'Points',
     shop: 'Shop', levels: 'Levels', favorites: 'Favorites', notices: 'News', materials: 'Materials',
     status: 'Status', about: 'About', changelog: 'Changelog',
     admin: 'Admin', profile: 'Profile', login: 'Campux Login', logout: 'Logout', mine: 'Mine',
     logs: 'Logs',
-    ai: 'AI Ask', queue: 'Judge Queue', terms: 'Terms of Service', privacy: 'Privacy Policy' },
+    ai: 'AI Ask', queue: 'Judge Queue', terms: 'Terms of Service', privacy: 'Privacy Policy',
+    notes: 'Notes' },
 }
 const saved = localStorage.getItem('swoj_lang') || 'zh'
 export const i18n = reactive({
