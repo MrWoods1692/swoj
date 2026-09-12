@@ -165,13 +165,21 @@ func (j *JudgeConfig) Snapshot() JudgeSnapshot {
 }
 
 // AIConfig 配置 AI 问答/解析代理。APIKey 为空时返回「未配置」提示而非报错。
+//
+// Provider 决定走哪个实现：
+//   - "yunzhi"（默认）：调用 yunzhiapi.cn 的 DeepSeek 代理；token 存 admin_configs('ai.token')
+//   - "openai"：调用 OpenAI 兼容的 chat/completions 接口
 type AIConfig struct {
-	Enabled     bool
-	APIURL      string
-	APIKey      string
-	Model       string
-	MaxTokens   int
-	Temperature float32
+	Enabled      bool
+	Provider     string
+	YunzhiURL    string
+	YunzhiToken  string
+	APIURL       string
+	APIKey       string
+	Model        string
+	MaxTokens    int
+	Temperature  float32
+	SystemPrompt string
 }
 
 // LoadConfig 从环境变量构建配置。
@@ -196,11 +204,14 @@ func LoadConfig() *Config {
 		},
 
 		AI: AIConfig{
-			Enabled:     envBool("SWOJ_AI_ENABLED", false),
-			APIURL:      envStr("SWOJ_AI_URL", "https://api.openai.com/v1/chat/completions"),
-			APIKey:      envStr("SWOJ_AI_KEY", ""),
-			Model:       envStr("SWOJ_AI_MODEL", "gpt-4o-mini"),
-			MaxTokens:   envInt("SWOJ_AI_MAX_TOKENS", 1024),
+			Enabled:    envBool("SWOJ_AI_ENABLED", true),
+			Provider:   envStr("SWOJ_AI_PROVIDER", "yunzhi"),
+			YunzhiURL:  envStr("SWOJ_AI_URL", "https://yunzhiapi.cn/API/deepseek.php"),
+			YunzhiToken: envStr("SWOJ_AI_TOKEN", ""),
+			APIURL:     envStr("SWOJ_AI_OPENAI_URL", "https://api.openai.com/v1/chat/completions"),
+			APIKey:     envStr("SWOJ_AI_OPENAI_KEY", ""),
+			Model:      envStr("SWOJ_AI_MODEL", "gpt-4o-mini"),
+			MaxTokens:  envInt("SWOJ_AI_MAX_TOKENS", 1024),
 			Temperature: float32(envFloat("SWOJ_AI_TEMP", 0.4)),
 		},
 		Points: loadPointsConfig(),

@@ -51,6 +51,25 @@ export const api = {
   post: (p, b) => request('POST', p, b ?? {}),
   put: (p, b) => request('PUT', p, b ?? {}),
   del: (p) => request('DELETE', p),
+  // 上传 multipart 数据；fetch 会自动填 Content-Type 的 boundary。
+  // 用法：const fd = new FormData(); fd.append('question', q); fd.append('files[]', file)
+  upload: (p, fd) => {
+    const opts = { method: 'POST', body: fd, credentials: 'same-origin', headers: {} }
+    const csrf = cookie('swoj_csrf')
+    if (csrf) opts.headers['X-CSRF-Token'] = csrf
+    return new Promise(async (resolve, reject) => {
+      try {
+        const res = await fetch(BASE + p, opts)
+        let data
+        try { data = await res.json() } catch { data = { code: res.status, msg: '响应解析失败' } }
+        if (res.status === 401) { auth.user = null; throw new ApiError(data.msg || '请先登录', 401, data) }
+        if (!res.ok || (data.code && data.code !== 200)) {
+          throw new ApiError(data.msg || '请求失败', data.code || res.status, data)
+        }
+        resolve(data.data)
+      } catch (e) { reject(e) }
+    })
+  },
   cookie,
 }
 

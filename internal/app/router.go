@@ -272,6 +272,9 @@ func NewRouter(s *Server) http.Handler {
 	// AI 问答与解析
 	pri("POST /api/ai/ask", s.aiAsk)
 	pri("GET /api/ai/history", s.aiHistory)
+	// 管理员 AI 配置（token / system_prompt / provider）
+	pri("GET /api/admin/ai-config", s.aiConfigGet)
+	pri("PUT /api/admin/ai-config", s.aiConfigSave)
 
 	// 管理后台：积分规则与商城
 	pri("POST /api/admin/points/adjust", s.adminPointsAdjust)

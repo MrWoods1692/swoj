@@ -1,8 +1,11 @@
 package app
 
 import (
+	"io"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -154,7 +157,7 @@ func fmtPct(num, den int) string {
 	return strconv.FormatFloat(float64(num)/float64(den)*100, 'f', 2, 64) + "%"
 }
 
-// AIAskReq AI 问答请求。
+// AIAskReq AI 问答请求（JSON 版本）。
 type AIAskReq struct {
 	ProblemID int64  `json:"problem_id"`
 	Question  string `json:"question"`
@@ -162,32 +165,123 @@ type AIAskReq struct {
 	Status    int    `json:"status"`
 }
 
-// aiAsk 调用外部大模型问答；未配置 APIKey 时返回可读提示而非报错。
+// AIFileItem 描述 multipart 上传的单个文件字段。
+type AIFileItem struct {
+	Name    string
+	Content string
+}
+
+// aiAsk 调用外部大模型问答；支持 JSON 与 multipart 两种上传方式。
+// multipart 上传时字段名：
+//
+//	problem_id / status  可选
+//	question            可选，纯文本提问
+//	code                可选，代码文本
+//	files[]             可选，附件，允许多个；支持 .cpp/.txt/.in/.out 等文本文件
+//
+// 附件内容会被拼接进 prompt，与 code/question 一同发送给模型。
 func (s *Server) aiAsk(w http.ResponseWriter, r *http.Request) {
 	claims, ok := requireClaims(w, r)
 	if !ok {
 		return
 	}
 	if !s.AI.Enabled {
-		Fail(w, http.StatusServiceUnavailable, "AI 服务未启用，请先在服务端配置 SWOJ_AI_ENABLED 与 SWOJ_AI_KEY")
+		Fail(w, http.StatusServiceUnavailable, "AI 服务未启用，请管理员在后台配置 AI Token")
 		return
 	}
+
 	var req AIAskReq
-	if err := decode(r, &req); err != nil {
-		Fail(w, http.StatusBadRequest, err.Error())
+	var files []AIFileItem
+
+	ct := r.Header.Get("Content-Type")
+	if strings.HasPrefix(ct, "multipart/form-data") {
+		// 上传限额：单文件 1MB，总数 5 个，总大小 3MB；超出直接 413。
+		if err := r.ParseMultipartForm(3 << 20); err != nil {
+			Fail(w, http.StatusRequestEntityTooLarge, "上传过大："+err.Error())
+			return
+		}
+		val := func(k string) string { v := r.FormValue(k); return v }
+		if v := val("problem_id"); v != "" {
+			req.ProblemID = int64(atoiDefault(v, 0))
+		}
+		if v := val("status"); v != "" {
+			req.Status = atoiDefault(v, 0)
+		}
+		req.Question = val("question")
+		req.Code = val("code")
+
+		hf, ok := r.MultipartForm.File["files[]"]
+		if !ok {
+			hf = r.MultipartForm.File["files"]
+		}
+		if ok {
+			for i, fh := range hf {
+				if i >= 5 {
+					Fail(w, http.StatusBadRequest, "最多上传 5 个文件")
+					return
+				}
+				if fh.Size > 1<<20 {
+					Fail(w, http.StatusBadRequest, "单个文件不能超过 1MB")
+					return
+				}
+				f, err := fh.Open()
+				if err != nil {
+					Fail(w, http.StatusInternalServerError, err.Error())
+					return
+				}
+				buf, err := io.ReadAll(io.LimitReader(f, 1<<20))
+				_ = f.Close()
+				if err != nil {
+					Fail(w, http.StatusInternalServerError, err.Error())
+					return
+				}
+				if !isTextFile(fh.Filename) {
+					Fail(w, http.StatusBadRequest,
+						"文件类型不支持："+fh.Filename+"（仅支持 .cpp/.txt/.in/.out/.c/.h/.py/.md 等文本文件）")
+					return
+				}
+				files = append(files, AIFileItem{Name: fh.Filename, Content: string(buf)})
+			}
+		}
+	} else {
+		if err := decode(r, &req); err != nil {
+			Fail(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+
+	question := strings.TrimSpace(req.Question)
+	// 有附件但没有 question 时，把文件内容作为提问主体；否则文件只作为上下文。
+	if question == "" && len(files) == 0 && req.Code == "" {
+		Fail(w, http.StatusBadRequest, "问题或附件不能全为空")
 		return
 	}
-	if req.Question == "" {
-		Fail(w, http.StatusBadRequest, "问题不能为空")
+
+	// 所有请求体校验通过后再检查 AI 服务可用性；否则文件校验会被 503 掩盖。
+	provider := strings.ToLower(strings.TrimSpace(s.AI.Provider))
+	if provider == "yunzhi" && s.AI.YunzhiToken == "" {
+		Fail(w, http.StatusServiceUnavailable, "AI 服务未启用，请管理员在后台配置 AI Token")
 		return
 	}
-	answer, src, err := callAI(s.AI, s.aiPrompt(req))
+	if provider != "yunzhi" && provider != "" && s.AI.APIKey == "" {
+		Fail(w, http.StatusServiceUnavailable, "AI 服务未启用，请管理员在后台配置 API Key")
+		return
+	}
+
+	answer, src, err := callAI(s.AI, s.aiPrompt(req, files))
 	if err != nil {
 		Fail(w, http.StatusBadGateway, "AI 服务调用失败："+err.Error())
 		return
 	}
+
+	// 保存到 ai_qas：question 存用户提问；若无 question 但有文件，落一份文件摘要。
+	stored := question
+	if stored == "" && len(files) > 0 {
+		stored = "(文件附件：" + strings.Join(fileNames(files), ", ") + ")"
+	}
+
 	res, err := s.db.Exec(`INSERT INTO ai_qas(user_id, problem_id, question, answer, source) VALUES(?,?,?,?,?)`,
-		claims.UserID, req.ProblemID, req.Question, answer, src)
+		claims.UserID, req.ProblemID, stored, answer, src)
 	if err != nil {
 		Fail(w, http.StatusInternalServerError, err.Error())
 		return
@@ -196,8 +290,8 @@ func (s *Server) aiAsk(w http.ResponseWriter, r *http.Request) {
 	OK(w, map[string]any{"id": id, "answer": answer, "source": src})
 }
 
-// aiPrompt 拼装发给模型的上下文，含题目信息、代码与当前判题状态。
-func (s *Server) aiPrompt(req AIAskReq) string {
+// aiPrompt 拼装发给模型的上下文，含题目信息、代码、当前判题状态与附件内容。
+func (s *Server) aiPrompt(req AIAskReq, files []AIFileItem) string {
 	ctx := ""
 	if req.ProblemID > 0 {
 		var name, content string
@@ -215,18 +309,50 @@ func (s *Server) aiPrompt(req AIAskReq) string {
 		}
 		ctx += "\n用户代码：\n" + req.Code
 	}
-	return "你是一个算法竞赛辅导助手。请结合以下上下文，用中文给出简洁、可执行的分析与建议。" +
-		ctx + "\n\n用户问题：" + req.Question
+	for _, f := range files {
+		content := f.Content
+		if len(content) > 12000 {
+			content = content[:12000] + "\n…(已截断)"
+		}
+		ctx += "\n附件 " + f.Name + " 内容：\n" + content
+	}
+	q := strings.TrimSpace(req.Question)
+	if q == "" {
+		q = "请分析以上代码/文件内容，指出问题并给出改进方案。"
+	}
+	return "用户问题：" + q + ctx
 }
 
-// aiHistory 返回当前用户最近的 AI 问答记录。
+// isTextFile 判断扩展名是否是可发送给模型的文本文件。
+func isTextFile(name string) bool {
+	ext := strings.ToLower(filepath.Ext(name))
+	switch ext {
+	case ".cpp", ".cxx", ".cc", ".c", ".h", ".hpp", ".hxx",
+		".txt", ".in", ".out", ".md", ".py", ".java", ".js", ".ts", ".go",
+		".rs", ".rb", ".sh", ".sql", ".json", ".xml", ".yml", ".yaml", ".csv", ".log":
+		return true
+	}
+	return false
+}
+
+// fileNames 提取附件文件名列表。
+func fileNames(files []AIFileItem) []string {
+	out := make([]string, len(files))
+	for i, f := range files {
+		out[i] = f.Name
+	}
+	return out
+}
+
+// aiHistory 返回当前用户最近的 AI 问答记录；只保留近 7 天内的记录。
 func (s *Server) aiHistory(w http.ResponseWriter, r *http.Request) {
 	claims, ok := requireClaims(w, r)
 	if !ok {
 		return
 	}
+	since := time.Now().Add(-aiRetentionDuration)
 	rows, err := s.db.Query(`SELECT id, problem_id, question, answer, source, created_at FROM ai_qas
-		WHERE user_id=? ORDER BY id DESC LIMIT 50`, claims.UserID)
+		WHERE user_id=? AND created_at >= ? ORDER BY id DESC LIMIT 50`, claims.UserID, since)
 	if err != nil {
 		Fail(w, http.StatusInternalServerError, err.Error())
 		return
@@ -254,4 +380,102 @@ type AIHistoryItem struct {
 	Answer    string `json:"answer"`
 	Source    string `json:"source"`
 	CreatedAt string `json:"created_at"`
+}
+
+// AICfgReq 管理员后台保存 AI 配置的请求体。
+type AICfgReq struct {
+	Token        string `json:"token"`
+	Provider     string `json:"provider"`
+	SystemPrompt string `json:"system_prompt"`
+	ClearToken   bool   `json:"clear_token"` // 显式清除已保存的 Token
+}
+
+// aiConfigGet 返回当前 AI 配置（token 做掩码处理）。
+// 非空 token 显示为前 4 + **** + 后 4；未配置时为空串。
+func (s *Server) aiConfigGet(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireAdminClaims(w, r); !ok {
+		return
+	}
+	// 每次从 DB 重新读取一次，保证返回的是后台最新值。
+	loadAIConfig(s.db, s.AI)
+	OK(w, map[string]any{
+		"enabled":       s.AI.Enabled,
+		"provider":      s.AI.Provider,
+		"yunzhi_url":    s.AI.YunzhiURL,
+		"token_masked":  maskToken(s.AI.YunzhiToken),
+		"has_token":     s.AI.YunzhiToken != "",
+		"system_prompt": s.AI.SystemPrompt,
+		"default_prompt": DefaultAISystemPrompt,
+		"retention_days": aiRetentionDays,
+	})
+}
+
+// aiConfigSave 保存 AI 配置。空 token 表示清除；system_prompt 空表示恢复默认。
+func (s *Server) aiConfigSave(w http.ResponseWriter, r *http.Request) {
+	if _, ok := requireAdminClaims(w, r); !ok {
+		return
+	}
+	var req AICfgReq
+	if err := decode(r, &req); err != nil {
+		Fail(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	provider := strings.ToLower(strings.TrimSpace(req.Provider))
+	if provider == "" {
+		provider = "yunzhi"
+	}
+	if provider != "yunzhi" && provider != "openai" {
+		Fail(w, http.StatusBadRequest, "provider 仅支持 yunzhi 或 openai")
+		return
+	}
+	token := strings.TrimSpace(req.Token)
+	if token != "" && len(token) > 256 {
+		Fail(w, http.StatusBadRequest, "token 过长")
+		return
+	}
+	sys := req.SystemPrompt
+	if len(sys) > 4000 {
+		Fail(w, http.StatusBadRequest, "system_prompt 不能超过 4000 字")
+		return
+	}
+	clearToken := req.ClearToken
+
+	// 保存配置：空 token 视为「不修改」，避免管理员只想更新提示词却误清 Token。
+	// 需要显式清除 Token 时，管理员可传 clear_token=true。
+	if token != "" {
+		_, _ = s.db.Exec(`INSERT INTO admin_configs(key, value) VALUES('ai.token', ?)
+			ON CONFLICT(key) DO UPDATE SET value=excluded.value`, token)
+		s.AI.YunzhiToken = token
+		s.AI.Enabled = true
+	} else if clearToken {
+		_, _ = s.db.Exec(`UPDATE admin_configs SET value='' WHERE key='ai.token'`)
+		s.AI.YunzhiToken = ""
+	}
+
+	_, _ = s.db.Exec(`INSERT INTO admin_configs(key, value) VALUES('ai.provider', ?)
+		ON CONFLICT(key) DO UPDATE SET value=excluded.value`, provider)
+	_, _ = s.db.Exec(`INSERT INTO admin_configs(key, value) VALUES('ai.system_prompt', ?)
+		ON CONFLICT(key) DO UPDATE SET value=excluded.value`, sys)
+
+	// 立即回写到内存
+	s.AI.Provider = provider
+	s.AI.SystemPrompt = sys
+
+	OK(w, map[string]any{
+		"provider":     provider,
+		"token_masked": maskToken(s.AI.YunzhiToken),
+		"has_token":    s.AI.YunzhiToken != "",
+	})
+}
+
+// maskToken 生成 token 的展示形式：短于 12 位时全部打星；否则前 4 + **** + 后 4。
+func maskToken(t string) string {
+	t = strings.TrimSpace(t)
+	if t == "" {
+		return ""
+	}
+	if len(t) < 12 {
+		return strings.Repeat("*", len(t))
+	}
+	return t[:4] + "****" + t[len(t)-4:]
 }
