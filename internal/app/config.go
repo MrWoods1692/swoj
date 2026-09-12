@@ -23,6 +23,10 @@ type Config struct {
 	Judge  JudgeConfig
 	AI     AIConfig
 	Points *PointsConfig
+	// Levels 等级档位表，未配置时用 DefaultLevelTiers()。
+	Levels []LevelTier
+	// Campux OAuth 登录。密钥可由管理员控制台写入 admin_configs 覆盖，无需发版即可更换。
+	OAuth OAuthConfig
 }
 
 // PointsConfig 积分规则：可通过环境变量覆盖，未配置取默认值。
@@ -51,6 +55,36 @@ func DefaultPointsConfig() *PointsConfig {
 		Contest:        map[string]int{"1": 50, "2": 30, "3": 20},
 		ContestDefault: 10,
 	}
+}
+
+// OAuthConfig Campux 校园墙 OAuth2 接入参数。
+// BaseURL 对应 Campux 站点根地址，三个端点由它推导；
+// Secret 只放服务端，不得下发前端。
+type OAuthConfig struct {
+	BaseURL     string
+	AuthURL     string
+	TokenURL    string
+	UserInfoURL string
+	ClientID    string
+	Secret      string
+	Scope       string
+	HostURL     string
+	Callback    string
+	Login       string
+}
+
+// OAuthEnabled 判断 OAuth 登录是否已配置完整并可用。
+func (c *OAuthConfig) OAuthEnabled() bool {
+	return c != nil && c.ClientID != "" && c.Secret != ""
+}
+
+// OAuthCallbackURL 拼出完整回调地址，作为 Campux 侧需要登记的地址。
+func (c *OAuthConfig) OAuthCallbackURL() string {
+	cb := c.Callback
+	if cb != "" && cb[0] != '/' {
+		cb = "/" + cb
+	}
+	return strings.TrimRight(c.HostURL, "/") + cb
 }
 
 // JudgeConfig 控制测评服务：进程池规模、单用例资源限制与本地 judge 二进制路径。
@@ -107,8 +141,33 @@ func LoadConfig() *Config {
 			Temperature: float32(envFloat("SWOJ_AI_TEMP", 0.4)),
 		},
 		Points: loadPointsConfig(),
+		OAuth:  loadOAuthConfig(),
 	}
 	return cfg
+}
+
+// 回调路径固定为 /auth/campux/callback；Campux OAuth 应用里登记的地址必须与此完全一致，
+// 协议、域名、路径、末尾斜杠任一不同都会导致 redirect_uri mismatch 或未注册。
+const oauthCallbackPath = "/auth/campux/callback"
+
+// loadOAuthConfig 从环境变量读取 Campux OAuth 接入参数，未设置时用默认值。
+// 密钥建议只放服务端环境变量，不要提交进代码仓库。
+func loadOAuthConfig() OAuthConfig {
+	base := envStr("SWOJ_OAUTH_BASE", "http://kg.campux.top")
+	base = strings.TrimRight(base, "/")
+	c := OAuthConfig{
+		BaseURL:     base,
+		AuthURL:     base + "/oauth/authorize",
+		TokenURL:    base + "/oauth/token",
+		UserInfoURL: base + "/oauth/userinfo",
+		ClientID:    envStr("SWOJ_OAUTH_CLIENT_ID", "4ROQNWLOP5zRkhQe"),
+		Secret:      envStr("SWOJ_OAUTH_SECRET", ""),
+		Scope:       envStr("SWOJ_OAUTH_SCOPE", "profile tenant"),
+		HostURL:     envStr("SWOJ_HOST", "http://localhost:8080"),
+		Callback:    oauthCallbackPath,
+		Login:       "/login",
+	}
+	return c
 }
 
 func envStr(k, d string) string {
