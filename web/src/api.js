@@ -71,6 +71,30 @@ export const api = {
     })
   },
   cookie,
+  // 下载文件：从响应头取文件名，无头时给默认。跨域不兼容，仅限同源。
+  download: async (path, filenameFallback) => {
+    const csrf = cookie('swoj_csrf')
+    const opts = { method: 'GET', credentials: 'same-origin', headers: {} }
+    if (csrf) opts.headers['X-CSRF-Token'] = csrf
+    const res = await fetch(BASE + path, opts)
+    if (!res.ok) {
+      let msg = '下载失败'
+      try { msg = (await res.json()).msg || msg } catch {}
+      throw new ApiError(msg, res.status, null)
+    }
+    const blob = await res.blob()
+    const cd = res.headers.get('Content-Disposition') || ''
+    const m = cd.match(/filename="([^"]+)"/)
+    const filename = m ? m[1] : filenameFallback || 'download'
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  },
 }
 
 // 当前登录用户，App 启动时经 /api/auth/me 填充。null 表示未登录。

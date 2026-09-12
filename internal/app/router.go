@@ -168,6 +168,7 @@ func NewRouter(s *Server) http.Handler {
 	pri("POST /api/contests", s.contestCreate)
 	pub("GET /api/contests/{id}", s.contestDetail)
 	pub("GET /api/contests/{id}/rank", s.contestRank)
+	pub("GET /api/contests/{id}/rank/export", s.contestRankExport)
 	pri("POST /api/contests/{id}/enroll", s.contestEnroll)
 
 	// 作业

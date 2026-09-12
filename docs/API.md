@@ -62,7 +62,8 @@ pri  POST /api/training-plans                  创建训练计划（admin）
 
 pub  GET  /api/contests                        比赛列表
 pub  GET  /api/contests/{id}                   比赛详情
-pub  GET  /api/contests/{id}/rank              比赛排行榜
+pub  GET  /api/contests/{id}/rank              比赛排行榜（JSON 数组）
+pub  GET  /api/contests/{id}/rank/export       比赛排行榜导出（format=csv|tsv|json|markdown|html|xlsx）
 pri  POST /api/contests                        创建比赛（admin）
 pri  POST /api/contests/{id}/enroll            报名参加比赛
 

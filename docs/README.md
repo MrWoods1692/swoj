@@ -38,6 +38,7 @@
 | [`config.md`](config.md) | 全局配置：admin_configs 键值表与 /api/admin/config |
 | [`notes.md`](notes.md) | 个人笔记：仅本人可见的私密备忘 |
 | [`proposals.md`](proposals.md) | 学生出题：题目草稿 → 审核 → 入题库 + 发积分 |
+| [`export.md`](export.md) | 比赛成绩表导出：csv/tsv/json/markdown/html/xlsx 六种格式 |
 
 ## 相关资源
 

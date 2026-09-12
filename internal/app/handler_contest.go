@@ -219,13 +219,18 @@ func (s *Server) contestEnroll(w http.ResponseWriter, r *http.Request) {
 }
 
 // contestRank 返回比赛内的个人通过排行榜，按通过题数降序、首次通过时间升序。
+//
+// created_at 存的是 SQLite CURRENT_TIMESTAMP 格式（"YYYY-MM-DD HH:MM:SS"，无时区），
+// modernc.org/sqlite 不会隐式解析成 time.Time——这里直接 Scan 成 string，
+// 排序与展示都用原始字符串（ISO 前缀顺序 = 时间升序）。
 func (s *Server) contestRank(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r)
 	if !ok {
 		Fail(w, http.StatusBadRequest, "比赛编号无效")
 		return
 	}
-	rows, err := s.db.Query(`SELECT username, COUNT(DISTINCT problem_id), MIN(created_at)
+	rows, err := s.db.Query(`SELECT username, COUNT(DISTINCT problem_id),
+		COALESCE(MIN(created_at), '') AS first_at
 		FROM submissions WHERE contest_id=? AND status=? GROUP BY username
 		ORDER BY COUNT(DISTINCT problem_id) DESC, MIN(created_at) ASC LIMIT 100`, id, StatusAccepted)
 	if err != nil {
@@ -237,12 +242,10 @@ func (s *Server) contestRank(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var e RankEntry
 		var acc int
-		var first time.Time
-		if err := rows.Scan(&e.Username, &acc, (*time.Time)(&first)); err != nil {
+		if err := rows.Scan(&e.Username, &acc, &e.FirstAt); err != nil {
 			continue
 		}
 		e.Accepted = acc
-		e.FirstAt = first.String()
 		list = append(list, e)
 	}
 	OK(w, list)

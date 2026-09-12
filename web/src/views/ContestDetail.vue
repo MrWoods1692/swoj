@@ -30,6 +30,22 @@ async function enroll() {
   } catch (e) { toast(e.message, false) }
 }
 
+async function exportRank(format) {
+  try {
+    await api.download('/api/contests/' + props.id + '/rank/export?format=' + format, 'contest-rank.' + (format === 'markdown' ? 'md' : format))
+    toast('导出成功')
+  } catch (e) { toast(e.message, false) }
+}
+
+const exportFormats = [
+  { key: 'csv', label: 'CSV' },
+  { key: 'tsv', label: 'TSV' },
+  { key: 'xlsx', label: 'Excel' },
+  { key: 'json', label: 'JSON' },
+  { key: 'markdown', label: 'Markdown' },
+  { key: 'html', label: 'HTML' },
+]
+
 async function submitCurrent() {
   if (!editor.problem) { toast('请选择一道题目', false); return }
   if (!editor.code.trim()) { toast('请先填写代码', false); return }
@@ -96,7 +112,13 @@ const problemName = computed(() => {
       </div>
 
       <div class="panel" style="margin-bottom:0">
-        <h3>排行榜</h3>
+        <div class="rank-head">
+          <h3>排行榜</h3>
+          <div class="export-group" v-if="contest.rank">
+            <span class="muted small">导出：</span>
+            <button v-for="f in exportFormats" :key="f.key" class="btn btn--ghost btn--sm" @click="exportRank(f.key)">{{ f.label }}</button>
+          </div>
+        </div>
         <div v-if="!contest.rank" class="muted small">该比赛未开放排行榜</div>
         <table class="tbl" v-else-if="rank.length">
           <thead><tr><th>#</th><th>用户</th><th>AC</th><th>首次通过</th></tr></thead>
@@ -118,6 +140,10 @@ const problemName = computed(() => {
 </template>
 
 <style scoped>
+.rank-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.rank-head h3 { margin: 0; }
+.export-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.export-group .btn { font-size: 12px; padding: 4px 10px; }
 .badge--ok { background: rgba(34,197,94,.15); color: #86efac; }
 .badge--muted { background: rgba(138,148,166,.15); color: #c7ccd6; }
 </style>
