@@ -128,6 +128,19 @@ var schemaDomain = []string{
 	`CREATE TABLE IF NOT EXISTS discussion_likes (
   user_id INTEGER NOT NULL, discussion_id INTEGER NOT NULL, PRIMARY KEY(user_id, discussion_id)
 )`,
+	`CREATE TABLE IF NOT EXISTS materials (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  category TEXT DEFAULT '',
+  url TEXT NOT NULL,
+  icon TEXT DEFAULT 'book',
+  desc TEXT DEFAULT '',
+  pinned INTEGER NOT NULL DEFAULT 0,
+  clicks INTEGER NOT NULL DEFAULT 0,
+  creator_id INTEGER NOT NULL DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`,
 }
 
 // schemaPoints 积分系统：总积分、流水、签到、在线统计、积分商城。
@@ -212,5 +225,16 @@ var schemaOps = []string{
   reason TEXT DEFAULT '',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   expire_at DATETIME
+)`,
+	`CREATE TABLE IF NOT EXISTS changelog (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  version TEXT NOT NULL,
+  kind TEXT DEFAULT 'feature',
+  content TEXT NOT NULL,
+  notes TEXT DEFAULT '',
+  creator INTEGER DEFAULT 0,
+  released_at TEXT DEFAULT '',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 )`,
 }

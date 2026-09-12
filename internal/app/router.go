@@ -201,6 +201,15 @@ func NewRouter(s *Server) http.Handler {
 	pub("GET /api/stats/site", s.statsSite)
 	pri("GET /api/admin/stats", s.statsAdmin)
 
+	// 更新日志：公开列表与详情，管理后台维护。
+	pub("GET /api/changelog", s.changelogList)
+	pub("GET /api/changelog/kinds", s.changelogMeta)
+	pub("GET /api/changelog/{id}", s.changelogDetail)
+	pri("GET /api/admin/changelog", s.changelogAdminList)
+	pri("POST /api/admin/changelog", s.changelogCreate)
+	pri("PUT /api/admin/changelog/{id}", s.changelogUpdate)
+	pri("DELETE /api/admin/changelog/{id}", s.changelogDelete)
+
 	// 管理后台：题目管理
 	pri("POST /api/admin/problems", s.problemCreate)
 	pri("POST /api/admin/problems/{id}", s.problemUpdate)

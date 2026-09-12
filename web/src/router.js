@@ -1,0 +1,46 @@
+import { createRouter, createWebHistory } from 'vue-router'
+
+const routes = [
+  { path: '/', name: 'home', component: () => import('./views/Home.vue') },
+  { path: '/problems', name: 'problems', component: () => import('./views/Problems.vue') },
+  { path: '/problems/:id', name: 'problem', component: () => import('./views/ProblemDetail.vue'), props: true },
+  { path: '/submissions', name: 'submissions', component: () => import('./views/Submissions.vue') },
+  { path: '/submissions/:id', name: 'submission', component: () => import('./views/SubmissionDetail.vue'), props: true },
+  { path: '/leaderboard', name: 'leaderboard', component: () => import('./views/Leaderboard.vue') },
+  { path: '/training', name: 'training', component: () => import('./views/Training.vue') },
+  { path: '/training/:id', name: 'trainingDetail', component: () => import('./views/TrainingDetail.vue'), props: true },
+  { path: '/contests', name: 'contests', component: () => import('./views/Contests.vue') },
+  { path: '/contests/:id', name: 'contest', component: () => import('./views/ContestDetail.vue'), props: true },
+  { path: '/assignments', name: 'assignments', component: () => import('./views/Assignments.vue') },
+  { path: '/assignments/:id', name: 'assignment', component: () => import('./views/AssignmentDetail.vue'), props: true },
+  { path: '/discussions', name: 'discussions', component: () => import('./views/Discussions.vue') },
+  { path: '/discussions/:id', name: 'discussion', component: () => import('./views/DiscussionDetail.vue'), props: true },
+  { path: '/wrong', name: 'wrong', component: () => import('./views/Wrong.vue') },
+  { path: '/points', name: 'points', component: () => import('./views/Points.vue') },
+  { path: '/levels', name: 'levels', component: () => import('./views/Levels.vue') },
+  { path: '/shop', name: 'shop', component: () => import('./views/Shop.vue') },
+  { path: '/favorites', name: 'favorites', component: () => import('./views/Favorites.vue') },
+  { path: '/notices', name: 'notices', component: () => import('./views/Notices.vue') },
+  { path: '/materials', name: 'materials', component: () => import('./views/Materials.vue') },
+  { path: '/notices/:id', name: 'notice', component: () => import('./views/NoticeDetail.vue'), props: true },
+  { path: '/status', name: 'status', component: () => import('./views/Status.vue') },
+  { path: '/queue', name: 'queue', component: () => import('./views/Queue.vue') },
+  { path: '/changelog', name: 'changelog', component: () => import('./views/Changelog.vue') },
+  { path: '/about', name: 'about', component: () => import('./views/About.vue') },
+  { path: '/terms', name: 'terms', component: () => import('./views/LegalView.vue'), props: { doc: 'terms' } },
+  { path: '/privacy', name: 'privacy', component: () => import('./views/LegalView.vue'), props: { doc: 'privacy' } },
+  { path: '/profile/:id', name: 'profile', component: () => import('./views/Profile.vue'), props: true },
+  { path: '/me', name: 'me', component: () => import('./views/Profile.vue') },
+  { path: '/admin', name: 'admin', component: () => import('./views/Admin.vue') },
+  { path: '/ai', name: 'ai', component: () => import('./views/AI.vue') },
+  { path: '/404', name: '404', component: () => import('./views/NotFound.vue') },
+  { path: '/:pathMatch(.*)*', redirect: '/404' },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes,
+  scrollBehavior: () => ({ top: 0 }),
+})
+
+export default router
