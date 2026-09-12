@@ -41,9 +41,17 @@ var schemaDomain = []string{
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   info TEXT DEFAULT '',
+  favorite_count INTEGER DEFAULT 0,
   visible INTEGER DEFAULT 1,
   creator INTEGER DEFAULT 0,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`,
+	`CREATE TABLE IF NOT EXISTS favorites (
+  user_id INTEGER NOT NULL,
+  type TEXT NOT NULL,
+  target_id INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(user_id, type, target_id)
 )`,
 	`CREATE TABLE IF NOT EXISTS training_records (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

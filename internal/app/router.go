@@ -141,6 +141,9 @@ func NewRouter(s *Server) http.Handler {
 	pri("PUT /api/auth/me", s.profileUpdate)
 	// 公开个人主页：任何访客可查看，前端外链 /profile/{id} 直接渲染此数据。
 	pub("GET /api/users/{id}/homepage", s.userHomepage)
+	// 收藏：题目与训练计划共用一组端点，type 为 problem 或 plan。
+	pri("POST /api/favorites/{type}/{id}", s.favoriteToggle)
+	pri("GET /api/favorites/{type}", s.favoriteList)
 	pub("GET /api/problems", s.problemList)
 	pub("GET /api/problems/{id}", s.problemDetail)
 	pri("POST /api/submissions", s.submit)

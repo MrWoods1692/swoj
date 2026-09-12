@@ -61,6 +61,7 @@ var schemaCore = []string{
   invisible INTEGER DEFAULT 0,
   accept INTEGER DEFAULT 0,
   submit INTEGER DEFAULT 0,
+  favorite_count INTEGER DEFAULT 0,
   content TEXT DEFAULT '',
   hint TEXT DEFAULT '',
   hint_time INTEGER DEFAULT 0,
