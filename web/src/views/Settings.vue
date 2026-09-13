@@ -45,7 +45,14 @@ async function save() {
     <h3>个人资料</h3>
     <p class="small muted" style="margin-top:-6px">头像与 QQ 号均由校园墙授权写入，不在本页修改。</p>
     <div class="grid grid--2">
-      <label class="fld"><span>真实姓名</span><input v-model="form.realname" /></label>
+      <div class="fld">
+        <span>真实姓名（首次登录后不可修改）</span>
+        <template v-if="form.realname">
+          <input class="fld--ro" :value="form.realname" disabled />
+          <div class="fld--hint">已填写，如需修改请联系管理员</div>
+        </template>
+        <input v-else v-model="form.realname" placeholder="3-4 个汉字" />
+      </div>
       <div class="fld">
         <span>QQ 号（授权写入，不可修改）</span>
         <input class="fld--ro" :value="auth.user.qq || '未绑定'" disabled />
@@ -76,4 +83,6 @@ async function save() {
   display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text); flex: none; }
 /* 只读展示列：保留表单栅格对位，但不可编辑 */
 .fld--ro { background: var(--panel2); color: var(--muted); font-variant-numeric: tabular-nums; }
+/* 只读列下的提示行：保持可编辑输入框的高度基线 */
+.fld--hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
 </style>

@@ -66,15 +66,21 @@ if n == 0 {
 
 ```json
 PUT /api/auth/me
-{ "realname": "张三", "school": "奎光学校", "signature": "个人简介" }
+{ "school": "奎光学校", "signature": "个人简介" }
 ```
 
-可写字段：`realname`（3–4 汉字）、`school`、`signature`（≤ 50 字）、`website`、`background`。均按部分更新，未传字段不变。
+可写字段：`school`、`signature`（≤ 50 字）、`website`、`background`。均按部分更新，未传字段不变。
+
+条件可写字段：
+
+- `realname`：仅允许首次补填（3–4 汉字）。建号时 OAuth 不写入该列，首次登录后仅可填一次；已有值后再传该字段（包括清空或改值）返回 403「真实姓名已填写，如需修改请联系管理员」。
 
 不可写字段：
 
 - `avatar`：由系统根据 QQ 号自动生成，返回 400「头像由系统自动生成，不可修改」
 - `qq`：校园墙 OAuth 身份键（`oauth_id` 同值），返回 400「QQ 号由校园墙授权写入，不可修改」
+
+真实姓名与学校的修改只能通过 `PUT /api/admin/users/{id}`（admin）；该接口以可空字段接收 `realname`，不传则保持原值，改值后写入 `operation_logs`。
 
 ### 个人统计
 

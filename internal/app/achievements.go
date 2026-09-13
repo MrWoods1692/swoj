@@ -335,8 +335,8 @@ func (s *Server) recordOnlineDay(userID int64, seconds int) {
 
 // profileUpdate 更新自己的个人资料：真实姓名、学校、头像、简介。
 // 字段部分提交也可，未传项保持不变；管理员无法通过此接口改他人资料。
-// QQ 号是校园墙 OAuth 身份键（oauth_id 同值），不允许本人覆盖，否则会把账号
-// 绑到无关身份上且无法反向找回。
+// 真实姓名仅可首次补填，此后只能由管理员改；QQ 号是校园墙 OAuth 身份键
+// （oauth_id 同值），不允许本人覆盖，否则会把账号绑到无关身份上且无法反向找回。
 func (s *Server) profileUpdate(w http.ResponseWriter, r *http.Request) {
 	claims, ok := requireClaims(w, r)
 	if !ok {
@@ -360,7 +360,22 @@ func (s *Server) profileUpdate(w http.ResponseWriter, r *http.Request) {
 	args := []any{}
 	if req.RealName != nil {
 		name := strings.TrimSpace(*req.RealName)
-		if name != "" && !cnRealname.MatchString(name) {
+		// 真实姓名仅允许首次补填：建号时 OAuth 不写入该列，允许本人反复改名
+		// 会破坏展示名与学籍的对应关系，故已有值后只可由管理员改。
+		// 此判定先于格式校验：否则已有姓名的用户改名为 2 字时会被格式错误抢先
+		// 拦下，报出误导性文案且本分支永不触发。
+		var cur string
+		if err := s.db.QueryRow(`SELECT COALESCE(realname,'') FROM users WHERE id=?`,
+			claims.UserID).Scan(&cur); err != nil {
+			Fail(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if cur != "" {
+			// 清空也算修改：否则用户先清空再重填，就能绕过“仅一次”的限制。
+			Fail(w, http.StatusForbidden, "真实姓名已填写，如需修改请联系管理员")
+			return
+		}
+		if name == "" || !cnRealname.MatchString(name) {
 			Fail(w, http.StatusBadRequest, "真实姓名需为 3-4 个汉字")
 			return
 		}

@@ -202,7 +202,7 @@ func (s *Server) userList(w http.ResponseWriter, r *http.Request) {
 	OK(w, list)
 }
 
-// userUpdate 管理员调整用户角色、学校与提交权限。
+// userUpdate 管理员调整用户角色、学校、真实姓名与提交权限。
 func (s *Server) userUpdate(w http.ResponseWriter, r *http.Request) {
 	claims, ok := requireAdminClaims(w, r)
 	if !ok {
@@ -214,9 +214,10 @@ func (s *Server) userUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Role      string `json:"role"`
-		School    string `json:"school"`
-		CanSubmit *bool  `json:"can_submit"`
+		Role      string  `json:"role"`
+		School    string  `json:"school"`
+		RealName  *string `json:"realname"`
+		CanSubmit *bool   `json:"can_submit"`
 	}
 	if err := decode(r, &req); err != nil {
 		Fail(w, http.StatusBadRequest, err.Error())
@@ -232,13 +233,29 @@ func (s *Server) userUpdate(w http.ResponseWriter, r *http.Request) {
 		Fail(w, http.StatusNotFound, "用户不存在")
 		return
 	}
-	_, err := s.db.Exec(`UPDATE users SET role=?, school=?, can_submit=? WHERE id=?`,
-		req.Role, req.School, boolInt(req.CanSubmit != nil && *req.CanSubmit), id)
+	sets := []string{"role=?", "school=?", "can_submit=?"}
+	args := []any{req.Role, req.School, boolInt(req.CanSubmit != nil && *req.CanSubmit)}
+	// 真实姓名只有管理员能改：本人只能在首次登录时补填（见 profileUpdate）。
+	if req.RealName != nil {
+		name := strings.TrimSpace(*req.RealName)
+		if name != "" && !cnRealname.MatchString(name) {
+			Fail(w, http.StatusBadRequest, "真实姓名需为 3-4 个汉字")
+			return
+		}
+		sets = append(sets, "realname=?")
+		args = append(args, name)
+	}
+	args = append(args, id)
+	_, err := s.db.Exec(`UPDATE users SET `+strings.Join(sets, ", ")+` WHERE id=?`, args...)
 	if err != nil {
 		Fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	logOp(s.db, claims, "user_update", strconv.FormatInt(id, 10), "role="+req.Role, clientIP(r))
+	detail := "role=" + req.Role
+	if req.RealName != nil {
+		detail += "; realname=" + strings.TrimSpace(*req.RealName)
+	}
+	logOp(s.db, claims, "user_update", strconv.FormatInt(id, 10), detail, clientIP(r))
 	OK(w, map[string]any{"id": id, "role": req.Role})
 }
 

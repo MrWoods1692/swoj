@@ -33,7 +33,7 @@ BASE_HOST = os.environ.get("SWOJ_HOST_PORT", "127.0.0.1:18080").split(":")
 HOST, PORT = BASE_HOST[0], int(BASE_HOST[1])
 DB = os.path.join(os.environ.get("SWOJ_DATA_DIR", "/tmp/swoj-terms-test"), "db", "swoj.db")
 WEB = os.path.join(os.environ.get("SWOJ_WEB", "/home/mrcwoods/code/swoj/web/src"))
-VERSION = "2026-09-2"
+VERSION = "2026-09-3"
 
 passed, failed = [], []
 JARS = {}   # name -> {cookie_name: value}
@@ -202,8 +202,11 @@ check("terms_accept 已留痕", n >= 1, f"count={n}")
 # [15] 前端静态检查
 print("[15] 前端资源")
 legals = open(os.path.join(WEB, "legals.js"), encoding="utf-8").read()
+gate = open(os.path.join(WEB, "components", "TermsGate.vue"), encoding="utf-8").read()
 check("legals 导出当前版本", f"TERMS_VERSION = '{VERSION}'" in legals, "")
 check("协议不再把 QQ 号列为自填项", "个人简介。QQ 号由校园墙授权自动写入" in legals, "")
+check("协议声明真实姓名仅可填写一次", "真实姓名仅可在首次登录时填写一次" in legals, "")
+check("门禁提示不再说真实姓名可自清", "真实姓名仅可填写一次" in gate and "可自行清空。" not in gate, "")
 check("设置页无 QQ 输入项", 'v-model="form.qq"' not in open(os.path.join(WEB, "views", "Settings.vue"), encoding="utf-8").read(), "")
 check("协议与隐私章节齐全", legals.count("'title'") + legals.count("title:") >= 20, "")
 check("导出 TERMS_DOC 与 PRIVACY_DOC", "TERMS_DOC" in legals and "PRIVACY_DOC" in legals, "")
@@ -212,7 +215,6 @@ check("router 含 /terms 与 /privacy", "/terms" in router and "/privacy" in rou
 app = open(os.path.join(WEB, "App.vue"), encoding="utf-8").read()
 check("App 挂载 TermsGate", "TermsGate" in app, "")
 check("页脚含协议与隐私入口", "/terms" in app and "/privacy" in app, "")
-gate = open(os.path.join(WEB, "components", "TermsGate.vue"), encoding="utf-8").read()
 check("门禁对比 TERMS_VERSION", "TERMS_VERSION" in gate, "")
 i18n_txt = open(os.path.join(WEB, "i18n.js"), encoding="utf-8").read()
 check("i18n 含协议与隐私词条", "terms:" in i18n_txt and "privacy:" in i18n_txt, "")
