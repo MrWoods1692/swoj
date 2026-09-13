@@ -68,7 +68,7 @@ const stack = [
   <div class="panel">
     <h3>使用提示</h3>
     <ul class="muted" style="line-height:2;margin:0;padding-left:20px">
-      <li>首次通过校园墙登录后，请补齐真实姓名与头像以解锁提交权限。</li>
+      <li>首次通过校园墙登录后，请补齐真实姓名与 QQ 号以解锁提交权限。</li>
       <li>目前仅支持 C++ 提交，编译命令由 go-judge 统一封装。</li>
       <li>每天可签到一次获得积分，签到连续天数影响成就解锁。</li>
       <li>排行榜按去重 AC 题数降序、总用时升序排列。</li>

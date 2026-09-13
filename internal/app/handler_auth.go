@@ -100,5 +100,9 @@ func (s *Server) me(w http.ResponseWriter, r *http.Request) {
 		Fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// 头像列不自填，响应层补齐 QQ 派生值：否则顶栏与个人中心只能看到字母占位。
+	if u.Avatar == "" {
+		u.Avatar = qqAvatarURL(u.QQ)
+	}
 	OK(w, u)
 }

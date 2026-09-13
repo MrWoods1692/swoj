@@ -239,6 +239,10 @@ func (s *Server) oauthIssue(w http.ResponseWriter, r *http.Request, username, qq
 		Fail(w, http.StatusInternalServerError, "账号不存在")
 		return
 	}
+	// 与 userByID / userHomepage 一致：头像列不自填，响应层补齐 QQ 派生值。
+	if u.Avatar == "" {
+		u.Avatar = qqAvatarURL(u.QQ)
+	}
 
 	token, err := SignToken(s.cfg.JWTSecret, s.cfg.JWTLife, u.ID, u.Role)
 	if err != nil {

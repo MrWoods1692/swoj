@@ -99,6 +99,8 @@ func requireEditorClaims(w http.ResponseWriter, r *http.Request) (*Claims, bool)
 }
 
 // userByID 按 ID 读取用户，不包含密码字段。
+// 头像列不再由用户填写，这里统一补齐 QQ 派生值：
+// 否则 /api/auth/me 返回空头像，顶栏只能退化为字母占位。
 func (s *Server) userByID(id int64) (User, bool) {
 	var u User
 	err := s.db.QueryRow(`SELECT id, username, email, realname, role, school, avatar, signature, website, background, qq,
@@ -106,5 +108,8 @@ func (s *Server) userByID(id int64) (User, bool) {
 		Scan(&u.ID, &u.Username, &u.Email, &u.RealName, &u.Role, &u.School, &u.Avatar, &u.Signature,
 			&u.Website, &u.Background, &u.QQ,
 			&u.ProblemCount, &u.RankNo, &u.CanSubmit, &u.Points, &u.Level)
+	if u.Avatar == "" {
+		u.Avatar = qqAvatarURL(u.QQ)
+	}
 	return u, err == nil
 }
