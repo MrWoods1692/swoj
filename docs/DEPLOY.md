@@ -36,19 +36,15 @@ sudo chown -R swoj:swoj /opt/swoj
 
 ## 3. 配置 judge
 
-安装 go-judge：
+测评内置执行器，默认即可使用，**无需安装 go-judge**。编译走本机 g++（C++17），
+单次执行用 C 包装器施加 rlimit（CPU/内存/文件大小）。
 
 ```bash
-sudo apt install g++ cmake
-git clone https://github.com/mrcj/GoJudge /tmp/gojudge && cd /tmp/gojudge
-./install.sh   # 输出 /usr/local/bin/go-judge
+g++ --version   # 需要 g++ 11+，编译与测评同一套工具链
 ```
 
-验证：
-
-```bash
-go-judge --version
-```
+`SWOJ_JUDGE_BIN` 仅用于接入外部测评程序，留空即使用内置执行器；
+`/api/judge/info` 的 `builtin_judge` 字段为 `true` 表示当前走内置。
 
 ## 4. systemd 服务
 

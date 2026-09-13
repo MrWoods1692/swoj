@@ -53,7 +53,7 @@ func (s *Server) problemList(w http.ResponseWriter, r *http.Request) {
 	var total int
 	_ = s.db.QueryRow(`SELECT COUNT(*) FROM problems `+where, args...).Scan(&total)
 
-	args = append(args, (page-1)*size, size)
+	args = append(args, size, (page-1)*size)
 	rows, err := s.db.Query(`SELECT id, name, difficulty, time_limit, mem_limit, accept, submit FROM problems `+
 		where+` ORDER BY id ASC LIMIT ? OFFSET ?`, args...)
 	if err != nil {
