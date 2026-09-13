@@ -5,7 +5,7 @@ import { api, auth, toast } from '../api'
 const loading = ref(true)
 const missing = ref(false)
 const saving = ref(false)
-const form = ref({ realname: '', qq: '', website: '', background: '', signature: '' })
+const form = ref({ realname: '', website: '', background: '', signature: '' })
 
 onMounted(async () => {
   if (!auth.user) { missing.value = true; loading.value = false; return }
@@ -14,7 +14,6 @@ onMounted(async () => {
   const u = d.user
   form.value = {
     realname: u.realname || '',
-    qq: u.qq || '',
     website: u.website || '',
     background: u.background || '',
     signature: u.signature || '',
@@ -44,10 +43,13 @@ async function save() {
 
   <div v-else-if="!loading" class="panel">
     <h3>个人资料</h3>
-    <p class="small muted" style="margin-top:-6px">头像由系统按 QQ 号自动生成，不在本页修改。</p>
+    <p class="small muted" style="margin-top:-6px">头像与 QQ 号均由校园墙授权写入，不在本页修改。</p>
     <div class="grid grid--2">
       <label class="fld"><span>真实姓名</span><input v-model="form.realname" /></label>
-      <label class="fld"><span>QQ 号</span><input v-model="form.qq" /></label>
+      <div class="fld">
+        <span>QQ 号（授权写入，不可修改）</span>
+        <input class="fld--ro" :value="auth.user.qq || '未绑定'" disabled />
+      </div>
       <label class="fld"><span>个人网站</span><input v-model="form.website" placeholder="https://" /></label>
       <label class="fld"><span>背景图 URL</span><input v-model="form.background" placeholder="https://" /></label>
       <div class="fld">
@@ -72,4 +74,6 @@ async function save() {
 .ava-prev__img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex: none; }
 .ava-prev__def { width: 40px; height: 40px; border-radius: 8px; background: var(--panel);
   display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text); flex: none; }
+/* 只读展示列：保留表单栅格对位，但不可编辑 */
+.fld--ro { background: var(--panel2); color: var(--muted); font-variant-numeric: tabular-nums; }
 </style>

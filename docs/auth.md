@@ -66,12 +66,15 @@ if n == 0 {
 
 ```json
 PUT /api/auth/me
-{ "realname": "张三", "school": "奎光学校", "qq": "1692138502", "signature": "个人简介" }
+{ "realname": "张三", "school": "奎光学校", "signature": "个人简介" }
 ```
 
-可写字段：`realname`（3–4 汉字）、`school`、`qq`（5–11 位数字）、`signature`（≤ 50 字）、`website`、`background`。均按部分更新，未传字段不变。
+可写字段：`realname`（3–4 汉字）、`school`、`signature`（≤ 50 字）、`website`、`background`。均按部分更新，未传字段不变。
 
-头像由系统根据 QQ 号自动生成，不可写：请求里带上 `avatar` 会返回 400「头像由系统自动生成，不可修改」。
+不可写字段：
+
+- `avatar`：由系统根据 QQ 号自动生成，返回 400「头像由系统自动生成，不可修改」
+- `qq`：校园墙 OAuth 身份键（`oauth_id` 同值），返回 400「QQ 号由校园墙授权写入，不可修改」
 
 ### 个人统计
 

@@ -335,6 +335,8 @@ func (s *Server) recordOnlineDay(userID int64, seconds int) {
 
 // profileUpdate 更新自己的个人资料：真实姓名、学校、头像、简介。
 // 字段部分提交也可，未传项保持不变；管理员无法通过此接口改他人资料。
+// QQ 号是校园墙 OAuth 身份键（oauth_id 同值），不允许本人覆盖，否则会把账号
+// 绑到无关身份上且无法反向找回。
 func (s *Server) profileUpdate(w http.ResponseWriter, r *http.Request) {
 	claims, ok := requireClaims(w, r)
 	if !ok {
@@ -368,6 +370,12 @@ func (s *Server) profileUpdate(w http.ResponseWriter, r *http.Request) {
 	if req.School != nil {
 		sets = append(sets, "school=?")
 		args = append(args, strings.TrimSpace(*req.School))
+	}
+	// QQ 号由 OAuth 建号时写入，同时作为 oauth_id 的身份键；
+	// 允许本人覆盖会破坏该绑定，且被覆盖后无法按 OAuth 回查找回原账号。
+	if req.QQ != nil {
+		Fail(w, http.StatusBadRequest, "QQ 号由校园墙授权写入，不可修改")
+		return
 	}
 	// 头像由平台按 QQ 自动派生（见 handler_profile.go 的 qqAvatarURL 回退），
 	// 不允许用户手动覆盖，否则会出现外链失效或指向无关图片。

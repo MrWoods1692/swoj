@@ -18,7 +18,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 
 // 协议版本：写入 users.terms_accepted_at，前端据此判定是否需要重新确认。
 // 提升版本号即可让全体用户在下次登录时重新看到条款。
-const TermsVersion = "2026-09"
+const TermsVersion = "2026-09-2"
 
 // optionalClaims 解析请求中的登录态但不强制：无令牌或令牌失效时返回 nil，
 // 供「匿名也可访问、登录后返回个性化结果」的公开端点使用。

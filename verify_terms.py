@@ -33,7 +33,7 @@ BASE_HOST = os.environ.get("SWOJ_HOST_PORT", "127.0.0.1:18080").split(":")
 HOST, PORT = BASE_HOST[0], int(BASE_HOST[1])
 DB = os.path.join(os.environ.get("SWOJ_DATA_DIR", "/tmp/swoj-terms-test"), "db", "swoj.db")
 WEB = os.path.join(os.environ.get("SWOJ_WEB", "/home/mrcwoods/code/swoj/web/src"))
-VERSION = "2026-09"
+VERSION = "2026-09-2"
 
 passed, failed = [], []
 JARS = {}   # name -> {cookie_name: value}
@@ -203,6 +203,8 @@ check("terms_accept 已留痕", n >= 1, f"count={n}")
 print("[15] 前端资源")
 legals = open(os.path.join(WEB, "legals.js"), encoding="utf-8").read()
 check("legals 导出当前版本", f"TERMS_VERSION = '{VERSION}'" in legals, "")
+check("协议不再把 QQ 号列为自填项", "个人简介。QQ 号由校园墙授权自动写入" in legals, "")
+check("设置页无 QQ 输入项", 'v-model="form.qq"' not in open(os.path.join(WEB, "views", "Settings.vue"), encoding="utf-8").read(), "")
 check("协议与隐私章节齐全", legals.count("'title'") + legals.count("title:") >= 20, "")
 check("导出 TERMS_DOC 与 PRIVACY_DOC", "TERMS_DOC" in legals and "PRIVACY_DOC" in legals, "")
 router = open(os.path.join(WEB, "router.js"), encoding="utf-8").read()
