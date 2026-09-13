@@ -1,12 +1,10 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { api, auth, fmtDate, toast } from '../api'
+import { api, auth, fmtDate } from '../api'
 
 const props = defineProps({ id: String })
 const data = ref(null)
 const missing = ref(false)
-const saving = ref(false)
-const form = ref({ realname: '', signature: '', website: '', background: '', qq: '' })
 
 const isMe = computed(() => auth.user && (!props.id || String(auth.user.id) === String(props.id)))
 
@@ -15,31 +13,9 @@ const load = async () => {
   if (!uid) { missing.value = true; return }
   data.value = await api.get('/api/users/' + uid + '/homepage').catch(() => null)
   missing.value = !data.value
-  if (data.value) {
-    form.value = {
-      realname: data.value.user.realname || '',
-      signature: data.value.user.signature || '',
-      website: data.value.user.website || '', background: data.value.user.background || '',
-      qq: data.value.user.qq || '',
-    }
-  }
 }
 
 onMounted(load)
-
-async function save() {
-  saving.value = true
-  try {
-    await api.put('/api/auth/me', form.value)
-    await auth.me()
-    await load()
-    toast('资料已保存')
-  } catch (e) {
-    toast(e.message, false)
-  } finally {
-    saving.value = false
-  }
-}
 
 const heat = computed(() => {
   const map = Object.fromEntries((data.value.heatmap || []).map(h => [h.date, h]))
@@ -129,28 +105,6 @@ const heatColor = ['var(--heat-0)', 'var(--heat-1)', 'var(--heat-2)', 'var(--hea
         </div>
       </div>
     </div>
-
-    <div v-if="isMe" class="panel">
-      <h3>编辑资料</h3>
-      <div class="grid grid--2">
-        <label class="fld"><span>真实姓名</span><input v-model="form.realname" /></label>
-        <label class="fld"><span>QQ 号</span><input v-model="form.qq" /></label>
-        <label class="fld"><span>个人网站</span><input v-model="form.website" placeholder="https://" /></label>
-        <label class="fld"><span>背景图 URL</span><input v-model="form.background" placeholder="https://" /></label>
-        <div class="fld">
-          <span>头像（按 QQ 自动生成，不可修改）</span>
-          <div class="ava-prev">
-            <img v-if="data.user.avatar" :src="data.user.avatar" class="ava-prev__img" alt=""
-              @error="(e) => { e.target.style.display = 'none' }" />
-            <span v-else class="ava-prev__def">{{ (data.user.realname || data.user.username)[0] }}</span>
-          </div>
-        </div>
-      </div>
-      <label class="fld"><span>个人简介</span><textarea v-model="form.signature" rows="2"></textarea></label>
-      <div class="row">
-        <button class="btn btn--primary" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存资料' }}</button>
-      </div>
-    </div>
   </template>
 </template>
 
@@ -161,9 +115,4 @@ const heatColor = ['var(--heat-0)', 'var(--heat-1)', 'var(--heat-2)', 'var(--hea
 .cover__inner { display: flex; gap: 18px; align-items: center; }
 .heat { display: grid; grid-template-columns: repeat(26, 1fr); gap: 3px; }
 .cell { aspect-ratio: 1; border-radius: 3px; }
-.ava-prev { height: 40px; display: flex; align-items: center; gap: 10px; background: var(--panel2);
-  border: 1px solid var(--border); border-radius: 10px; padding: 0 10px; }
-.ava-prev__img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; flex: none; }
-.ava-prev__def { width: 40px; height: 40px; border-radius: 8px; background: var(--panel);
-  display: flex; align-items: center; justify-content: center; font-size: 16px; color: var(--text); flex: none; }
 </style>

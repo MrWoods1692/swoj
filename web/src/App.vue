@@ -6,6 +6,15 @@ import TermsGate from './components/TermsGate.vue'
 import RestReminder from './components/RestReminder.vue'
 
 const collapsed = ref(true)
+const menuOpen = ref(false)
+
+function toggleMenu() {
+  menuOpen.value = !menuOpen.value
+}
+
+function closeMenu() {
+  menuOpen.value = false
+}
 
 function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme)
@@ -61,12 +70,20 @@ onMounted(() => {
           <router-link to="/notes" class="chip">{{ i18n.t('notes') }}</router-link>
           <router-link to="/proposals" class="chip">{{ i18n.t('proposals') }}</router-link>
       <router-link to="/logs" class="chip">{{ i18n.t('logs') }}</router-link>
-          <router-link to="/me" class="chip">
-            <img v-if="auth.user.avatar" :src="auth.user.avatar" class="chip__ava" alt="" />
-            <span v-else class="chip__ava chip__ava--def">{{ (auth.user.realname || auth.user.username)[0] }}</span>
-            {{ auth.user.realname || auth.user.username }}
-          </router-link>
-          <button class="btn btn--ghost" @click="doLogout">{{ i18n.t('logout') }}</button>
+          <div class="menu-wrap" @click.outside="closeMenu">
+            <button class="chip chip--btn" @click="toggleMenu">
+              <img v-if="auth.user.avatar" :src="auth.user.avatar" class="chip__ava" alt="" />
+              <span v-else class="chip__ava chip__ava--def">{{ (auth.user.realname || auth.user.username)[0] }}</span>
+              {{ auth.user.realname || auth.user.username }}
+              <span class="menu-wrap__caret">▾</span>
+            </button>
+            <div v-if="menuOpen" class="menu">
+              <router-link to="/me" @click="closeMenu">个人主页</router-link>
+              <router-link to="/settings" @click="closeMenu">个人资料</router-link>
+              <div class="menu__sep"></div>
+              <button class="menu__item" @click="closeMenu; doLogout()">退出登录</button>
+            </div>
+          </div>
         </template>
         <button v-else class="btn btn--primary" @click="auth.login()">{{ i18n.t('login') }}</button>
       </div>

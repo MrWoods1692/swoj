@@ -88,6 +88,19 @@ a:hover { text-decoration: underline; }
 .chip__ava { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
 .chip__ava--def { display: inline-flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-size: 12px; }
 
+/* ---- 用户菜单 ---- */
+.menu-wrap { position: relative; }
+.chip--btn { cursor: pointer; font-family: inherit; }
+.menu-wrap__caret { font-size: 10px; color: var(--muted); }
+.menu { position: absolute; right: 0; top: calc(100% + 6px); min-width: 132px; z-index: 60;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: var(--shadow); padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.menu a, .menu .menu__item { display: block; width: 100%; text-align: left; background: none; border: 0;
+  color: var(--text); font-size: 13px; font-family: inherit; padding: 8px 10px; border-radius: 7px;
+  cursor: pointer; text-decoration: none; }
+.menu a:hover, .menu .menu__item:hover { background: var(--panel2); }
+.menu__sep { height: 1px; background: var(--border); margin: 4px 2px; }
+
 /* ---- 布局 ---- */
 .page { max-width: 1200px; margin: 0 auto; padding: 20px 16px 60px; min-height: calc(100vh - 120px); }
 .foot { text-align: center; color: var(--muted); padding: 18px; border-top: 1px solid var(--border); font-size: 12px; }

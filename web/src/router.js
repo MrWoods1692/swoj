@@ -33,6 +33,7 @@ const routes = [
   { path: '/privacy', name: 'privacy', component: () => import('./views/LegalView.vue'), props: { doc: 'privacy' } },
   { path: '/profile/:id', name: 'profile', component: () => import('./views/Profile.vue'), props: true },
   { path: '/me', name: 'me', component: () => import('./views/Profile.vue') },
+  { path: '/settings', name: 'settings', component: () => import('./views/Settings.vue') },
   { path: '/admin', name: 'admin', component: () => import('./views/Admin.vue') },
   { path: '/admin/logs', name: 'adminLogs', component: () => import('./views/AdminLogs.vue') },
   { path: '/logs', name: 'myLogs', component: () => import('./views/MyLogs.vue') },
