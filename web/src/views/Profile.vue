@@ -95,7 +95,7 @@ const heatColor = ['var(--heat-0)', 'var(--heat-1)', 'var(--heat-2)', 'var(--hea
     <div class="grid grid--4" style="margin-bottom:16px">
       <div class="stat"><b>{{ data.stats.solved }}</b><span>已通过</span></div>
       <div class="stat"><b>{{ data.stats.submitted }}</b><span>总提交</span></div>
-      <div class="stat"><b>{{ data.stats.pass_rate }}%</b><span>通过率</span></div>
+      <div class="stat"><b>{{ data.stats.pass_rate }}</b><span>通过率</span></div>
       <div class="stat"><b>#{{ data.stats.rank }}</b><span>全站排名</span></div>
     </div>
 
