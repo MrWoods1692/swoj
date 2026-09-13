@@ -24,7 +24,7 @@ const docVersion = computed(() => (isPrivacy.value ? 'v1.0' : TERMS_META.version
         <span class="chip small">更新日期 {{ TERMS_META.updated }}</span>
       </div>
       <p class="small muted" style="margin-top:10px">
-        本政策由 Swoj Online Judge 提供，适用于本站全部服务。若您对本政策有任何疑问，
+        本政策由 School Wall Online Judge（Swoj）提供，适用于本站全部服务。若您对本政策有任何疑问，
         请通过站内公告渠道或联系管理员。
       </p>
     </header>
@@ -36,7 +36,7 @@ const docVersion = computed(() => (isPrivacy.value ? 'v1.0' : TERMS_META.version
 
     <footer class="legal__foot">
       <p class="small muted">
-        Swoj Online Judge · Go + SQLite + Vue3 · 校园墙授权登录
+        Swoj · School Wall Online Judge · Go + SQLite + Vue3 · 校园墙授权登录
       </p>
       <div class="row" style="margin-top:10px">
         <router-link :to="isPrivacy ? '/terms' : '/privacy'" class="btn btn--sm">

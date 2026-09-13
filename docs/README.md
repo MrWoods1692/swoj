@@ -1,6 +1,6 @@
 # SWOJ 文档
 
-本目录收录 SWOJ（Student Online Judge）的全部模块文档。项目根目录的 [`README.md`](../README.md) 是入口，负责快速开始、部署与目录结构。
+本目录收录 SWOJ（School Wall Online Judge，简称 swoj）的全部模块文档。项目根目录的 [`README.md`](../README.md) 是入口，负责快速开始、部署与目录结构。
 
 ## 文档列表
 

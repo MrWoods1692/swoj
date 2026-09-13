@@ -1,4 +1,4 @@
-# SWOJ — Student Online Judge
+# SWOJ — School Wall Online Judge
 
 从 0 开始实现的中学算法竞赛 Online Judge：Go 后端 + SQLite + Vue3/Vite 前端 + go-judge 测评（仅 C++）。
 

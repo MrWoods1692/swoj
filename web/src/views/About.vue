@@ -30,9 +30,9 @@ const stack = [
 
 <template>
   <div class="panel">
-    <h2>关于 SWOJ</h2>
+    <h2>关于 Swoj</h2>
     <p class="muted" style="line-height:1.8">
-      SWOJ 是一套面向校园算法学习的在线评测系统（Online Judge）。它把题库、训练、比赛、作业、
+      Swoj（School Wall Online Judge）是一套面向校园算法学习的在线评测系统。它把题库、训练、比赛、作业、
       讨论与个人成长串联成完整闭环：提交 C++ 代码后由独立测评进程自动判题，结果写入测评记录，
       未通过的题目自动进入错题本，通过后的题数推进行程与排行榜。
     </p>

@@ -27,7 +27,7 @@ function barH(t) {
   <div class="hero panel">
     <div class="hero__inner">
       <div>
-        <h1>Swoj <span>Online Judge</span></h1>
+        <h1>School Wall <span>Online Judge</span></h1>
         <p class="muted">校园编程在线评测 · Go + SQLite + 并发测评队列 · 仅 C++</p>
         <div class="row">
           <router-link class="btn btn--primary" to="/problems">开始刷题</router-link>
