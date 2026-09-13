@@ -36,7 +36,7 @@ onMounted(() => {
 <template>
   <header class="topbar">
     <div class="topbar__inner">
-      <router-link to="/" class="brand">Swoj<span>OJ</span></router-link>
+      <router-link to="/" class="brand"><img src="/logo.webp" class="brand__logo" alt="桂林市奎光学校" />Swoj<span>OJ</span></router-link>
       <nav class="nav" :class="{ 'nav--open': !collapsed }">
         <router-link to="/problems">{{ i18n.t('problems') }}</router-link>
         <router-link to="/training">{{ i18n.t('training') }}</router-link>
