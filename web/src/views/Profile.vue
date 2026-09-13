@@ -61,7 +61,7 @@ function heatLevel(h) {
   return 3
 }
 
-const heatColor = ['#1a2233', '#1e3a2b', '#1f6f43', '#22c55e']
+const heatColor = ['var(--heat-0)', 'var(--heat-1)', 'var(--heat-2)', 'var(--heat-3)']
 </script>
 
 <template>

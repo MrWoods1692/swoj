@@ -88,8 +88,8 @@ function barH(t) {
 .hero__inner h1 { margin: 0 0 6px; font-size: 30px; }
 .hero__inner h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .notice-line { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px dashed var(--border); color: var(--text); }
-.lv--warning { background: rgba(245,158,11,.15); color: #fcd34d; }
-.lv--danger { background: rgba(239,68,68,.15); color: #fca5a5; }
-.lv--success { background: rgba(34,197,94,.15); color: #86efac; }
-.lv--info { background: rgba(79,140,255,.15); color: #93c5fd; }
+.lv--warning { background: var(--warn-soft); color: var(--warn); }
+.lv--danger { background: var(--err-soft); color: var(--err); }
+.lv--success { background: var(--ok-soft); color: var(--ok); }
+.lv--info { background: var(--accent-soft); color: var(--accent); }
 </style>

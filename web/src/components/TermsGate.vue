@@ -75,7 +75,7 @@ async function accept() {
 <style scoped>
 .mask--terms {
   position: fixed; inset: 0; z-index: 90;
-  background: rgba(6, 10, 18, .72); backdrop-filter: blur(4px);
+  background: var(--mask-soft); backdrop-filter: blur(4px);
   display: flex; align-items: center; justify-content: center; padding: 24px;
 }
 .terms {

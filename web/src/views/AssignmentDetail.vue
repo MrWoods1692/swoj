@@ -55,6 +55,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.badge--ok { background: rgba(34,197,94,.15); color: #86efac; }
-.badge--muted { background: rgba(138,148,166,.15); color: #c7ccd6; }
+.badge--ok { background: var(--ok-soft); color: var(--ok); }
+.badge--muted { background: var(--muted-soft); color: var(--muted); }
 </style>

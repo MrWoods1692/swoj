@@ -107,23 +107,11 @@ const isTeacher = computed(() => isAdmin.value || authState.value?.role === 'tea
 
 ## 主题
 
-`assets/main.css` 定义 CSS 变量：
+`src/style.css` 用 CSS 变量定义两套主题。**默认亮色**（浅灰底 + 白卡片）；`html[data-theme="dark"]` 覆盖为暗色。
 
-```css
-:root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f6f8fa;
-  --text-primary: #24292f;
-  --text-secondary: #57606a;
-  --border: #d0d7de;
-  --accent: #0969da;
-  --success: #1a7f37;
-  --warning: #bf8c00;
-  --error: #cf222e;
-}
-```
+顶栏「🌙 / ☀️」按钮切换，写入 `localStorage.swoj_theme`。`index.html` 在 Vue 挂载前同步 `data-theme`，避免首屏闪白。
 
-暗色主题通过 `@media (prefers-color-scheme: dark)` 自动切换；也可通过 `html[data-theme="dark"]` 强制。
+亮色关键变量：`--bg #f4f7fb`、`--panel #ffffff`、`--text #1b2437`、`--accent #2563eb`。状态徽章走 `--ok-soft` / `--warn-soft` / `--err-soft`，不要在页面里写死暗色前景。
 
 ## 构建
 

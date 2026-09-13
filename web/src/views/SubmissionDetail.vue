@@ -61,7 +61,7 @@ function copy(text) {
 
     <div class="panel" v-if="data.error">
       <h3>错误信息</h3>
-      <div class="mono" style="color:#fca5a5">{{ data.error }}</div>
+      <div class="mono" style="color:var(--err)">{{ data.error }}</div>
     </div>
 
     <div class="panel" v-if="data.code">

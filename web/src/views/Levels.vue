@@ -72,7 +72,7 @@ async function buy(steps) {
         <div class="row">
           <span style="font-size:20px">{{ a.icon }}</span>
           <span style="flex:1;font-weight:600">{{ a.name }}</span>
-          <span class="badge" v-if="a.unlocked" style="background:rgba(34,197,94,.15);color:#86efac">已解锁</span>
+          <span class="badge badge--ok" v-if="a.unlocked">已解锁</span>
         </div>
         <div class="small muted" style="margin-top:6px">{{ a.desc }}</div>
         <div v-if="a.unlocked_at" class="small muted" style="margin-top:4px">{{ a.unlocked_at }}</div>

@@ -344,9 +344,9 @@ onMounted(() => {
 .proposal-head h3 { margin: 0; font-size: 16px; }
 .tag-link { display: inline-block; padding: 1px 6px; margin-right: 6px; border-radius: 4px; background: var(--bg-secondary); font-size: 11px; font-weight: 600; }
 .status { padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-.status.pending { background: #fef3c7; color: #92400e; }
-.status.approved { background: #d1fae5; color: #065f46; }
-.status.rejected { background: #fee2e2; color: #991b1b; }
+.status.pending { background: var(--warn-soft); color: var(--warn); }
+.status.approved { background: var(--ok-soft); color: var(--ok); }
+.status.rejected { background: var(--err-soft); color: var(--err); }
 .status.withdrawn { background: var(--bg-secondary); color: var(--text-secondary); }
 .meta { display: flex; gap: 12px; flex-wrap: wrap; color: var(--text-secondary); font-size: 12px; }
 .comment { font-style: italic; }

@@ -144,6 +144,6 @@ const problemName = computed(() => {
 .rank-head h3 { margin: 0; }
 .export-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .export-group .btn { font-size: 12px; padding: 4px 10px; }
-.badge--ok { background: rgba(34,197,94,.15); color: #86efac; }
-.badge--muted { background: rgba(138,148,166,.15); color: #c7ccd6; }
+.badge--ok { background: var(--ok-soft); color: var(--ok); }
+.badge--muted { background: var(--muted-soft); color: var(--muted); }
 </style>

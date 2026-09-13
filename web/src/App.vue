@@ -7,13 +7,30 @@ import RestReminder from './components/RestReminder.vue'
 
 const collapsed = ref(true)
 
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme)
+  localStorage.setItem('swoj_theme', theme)
+  themeLabel.value = theme === 'dark' ? '☀️' : '🌙'
+}
+
+const themeLabel = ref('🌙')
+
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'
+  setTheme(next)
+}
+
 async function doLogout() {
   await auth.logout()
   toast('已退出登录')
   location.href = '/'
 }
 
-onMounted(() => auth.me())
+onMounted(() => {
+  auth.me()
+  const saved = localStorage.getItem('swoj_theme')
+  setTheme(saved === 'dark' ? 'dark' : 'light')
+})
 </script>
 
 <template>
@@ -38,6 +55,7 @@ onMounted(() => auth.me())
       </nav>
       <div class="topbar__right">
         <button class="btn btn--ghost" @click="i18n.toggle()">{{ i18n.lang === 'zh' ? 'EN' : '中' }}</button>
+        <button class="btn btn--ghost" @click="toggleTheme" title="切换亮/暗主题">{{ themeLabel }}</button>
         <template v-if="auth.user">
           <router-link v-if="auth.isAdmin" to="/admin" class="btn btn--ghost">{{ i18n.t('admin') }}</router-link>
           <router-link to="/notes" class="chip">{{ i18n.t('notes') }}</router-link>
