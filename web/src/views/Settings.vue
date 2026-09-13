@@ -59,7 +59,7 @@ async function save() {
         </div>
       </div>
     </div>
-    <label class="fld"><span>个人简介</span><textarea v-model="form.signature" rows="2"></textarea></label>
+    <label class="fld"><span>个人简介</span><textarea v-model="form.signature" rows="2" maxlength="50" placeholder="选填，≤ 50 字"></textarea></label>
     <div class="row">
       <button class="btn btn--primary" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存资料' }}</button>
     </div>

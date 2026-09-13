@@ -376,8 +376,13 @@ func (s *Server) profileUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.Signature != nil {
+		v := strings.TrimSpace(*req.Signature)
+		if len([]rune(v)) > 50 {
+			Fail(w, http.StatusBadRequest, "个人简介最多 50 个字")
+			return
+		}
 		sets = append(sets, "signature=?")
-		args = append(args, strings.TrimSpace(*req.Signature))
+		args = append(args, v)
 	}
 	if req.Website != nil {
 		v := strings.TrimSpace(*req.Website)
