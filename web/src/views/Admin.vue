@@ -1,6 +1,6 @@
 <script setup>
 // 管理后台首页：概览 + 各管理域入口。
-// 各域的具体增删改查直接调用 /api/admin/* 与 /api/stats/admin，
+// 各域的具体增删改查直接调用 /api/admin/*，统计面板走 /api/admin/stats，
 // 在此页只做导航与顶部指标展示，避免单文件膨胀。
 import { computed, onMounted, ref } from 'vue'
 import { api, auth, fmtDate } from '../api'
@@ -11,7 +11,7 @@ const err = ref('')
 
 onMounted(async () => {
   if (!auth.isAdmin) return
-  stats.value = await api.get('/api/stats/admin').catch(e => { err.value = e.message; return null })
+  stats.value = await api.get('/api/admin/stats').catch(e => { err.value = e.message; return null })
   srv.value = await api.get('/api/status').catch(() => null)
 })
 

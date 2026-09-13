@@ -208,6 +208,9 @@ check("协议不再把 QQ 号列为自填项", "个人简介。QQ 号由校园�
 check("协议声明真实姓名仅可填写一次", "真实姓名仅可在首次登录时填写一次" in legals, "")
 check("门禁提示不再说真实姓名可自清", "真实姓名仅可填写一次" in gate and "可自行清空。" not in gate, "")
 check("设置页无 QQ 输入项", 'v-model="form.qq"' not in open(os.path.join(WEB, "views", "Settings.vue"), encoding="utf-8").read(), "")
+# 防回归：后端只注册了 /api/admin/stats，路径写反会命中接口不存在的 404。
+admin_vue = open(os.path.join(WEB, "views", "Admin.vue"), encoding="utf-8").read()
+check("后台统计路径为 /api/admin/stats", "/api/admin/stats" in admin_vue and "/api/stats/admin" not in admin_vue, "")
 check("协议与隐私章节齐全", legals.count("'title'") + legals.count("title:") >= 20, "")
 check("导出 TERMS_DOC 与 PRIVACY_DOC", "TERMS_DOC" in legals and "PRIVACY_DOC" in legals, "")
 router = open(os.path.join(WEB, "router.js"), encoding="utf-8").read()
