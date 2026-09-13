@@ -251,7 +251,7 @@ A: Campux 应用里登记的回调地址必须与 `SWOJ_HOST` 拼出的地址完
 `https://oj.example.com/auth/campux/callback`。
 
 **Q: 内存占用过高？**
-A: 调低 `SWOJ_WORKERS`（默认 4），或调低 `SWOJ_MEM_LIMIT_MB`。
+A: 调低 `SWOJ_JUDGE_WORKERS`（默认 2），或调低 `SWOJ_MEM_LIMIT`（默认 256 MB）。
 
 **Q: 如何查看日志？**
 A: `journalctl -u swoj -f`，或访问 `/admin/logs`。
