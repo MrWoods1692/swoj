@@ -292,7 +292,9 @@ func oauthExchangeToken(cfg OAuthConfig, code, verifier string) (string, error) 
 	return out.AccessToken, nil
 }
 
-// oauthUserInfo 拉取校园墙用户信息：name 是账号名，username 是真实姓名。
+// oauthUserInfo 拉取校园墙用户信息。
+// Campux /oauth/userinfo 的字段语义与直觉相反：name 是数字账号（QQ 号），
+// username 才是昵称。必须按这个顺序映射，否则用户名与 QQ 号会互换显示。
 type oauthProfile struct {
 	Name string
 	QQ   string
@@ -304,17 +306,21 @@ func oauthUserInfo(cfg OAuthConfig, access string) (oauthProfile, error) {
 		return oauthProfile{}, err
 	}
 	var out struct {
-		Name     string `json:"name"`
-		Username string `json:"username"`
+		Name     string `json:"name"`     // 数字账号 / QQ 号
+		Username string `json:"username"` // 昵称
 	}
 	if err := json.Unmarshal(body, &out); err != nil {
 		return oauthProfile{}, errors.New("用户信息解析失败")
 	}
-	qq := out.Username
-	if qq == "" {
-		qq = out.Name
+	display := out.Username
+	if display == "" {
+		display = out.Name
 	}
-	return oauthProfile{Name: out.Name, QQ: qq}, nil
+	qq := out.Name
+	if qq == "" {
+		qq = out.Username
+	}
+	return oauthProfile{Name: display, QQ: qq}, nil
 }
 
 // oauthPost 发起 POST 表单请求并返回响应体。
