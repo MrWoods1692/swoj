@@ -236,7 +236,7 @@ func loadOAuthConfig() OAuthConfig {
 		UserInfoURL: base + "/oauth/userinfo",
 		ClientID:    envStr("SWOJ_OAUTH_CLIENT_ID", "4ROQNWLOP5zRkhQe"),
 		Secret:      envStr("SWOJ_OAUTH_SECRET", ""),
-		Scope:       envStr("SWOJ_OAUTH_SCOPE", "profile tenant"),
+		Scope:       envStr("SWOJ_OAUTH_SCOPE", "profile"),
 		HostURL:     envStr("SWOJ_HOST", "http://localhost:8080"),
 		Callback:    oauthCallbackPath,
 		Login:       "/login",
