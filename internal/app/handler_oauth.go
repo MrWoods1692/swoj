@@ -129,6 +129,18 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	if redirect != nil && redirect.Value != "" {
 		target = redirect.Value
 	}
+
+	// 授权被拒绝、账号未登录或 redirect_uri 未注册时，Campux 会带 error 回跳
+	// 而不给 code。先确认 state 再展示对方给的失败原因。
+	if e := q.Get("error"); e != "" {
+		desc := q.Get("error_description")
+		if desc == "" {
+			desc = e
+		}
+		Fail(w, http.StatusUnauthorized, "校园墙授权未完成："+desc)
+		return
+	}
+
 	if stored == nil || q.Get("state") == "" || stored.Value != q.Get("state") {
 		Fail(w, http.StatusBadRequest, "登录状态已失效，请重新授权")
 		return

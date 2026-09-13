@@ -148,13 +148,38 @@ server {
 | 项 | 值 |
 |---|---|
 | 应用 ID | `4ROQNWLOP5zRkhQe`（`SWOJ_OAUTH_CLIENT_ID`，代码内置默认值） |
-| 应用 Secret | Campux 后台生成，服务端填入 `SWOJ_OAUTH_SECRET` |
+| 应用 Secret | Campux 后台生成（可轮换），服务端填入 `SWOJ_OAUTH_SECRET` |
 | 回调地址 | `{SWOJ_HOST}/auth/campux/callback` |
 | 授权类型 | authorization_code |
 | PKCE | S256（`enable_pkce`） |
 | Scopes | `profile` |
 
-回调地址的协议、域名、路径必须与 `SWOJ_HOST` 完全一致，且**不加末尾斜杠**。
+### 登记步骤
+
+1. 用有管理员权限的账号登录 Campux，进管理后台的 OAuth 应用管理页。
+2. 若应用不存在，点「新建 OAuth 应用」；应用 ID 会由 Campux 生成，
+   填好后把生成的 ID 写进 `SWOJ_OAUTH_CLIENT_ID`。
+3. 在「回调地址，每行一个」里加一行，**一行只能一个地址**：
+
+   ```
+   http://localhost:8080/auth/campux/callback
+   ```
+
+4. 在「允许的权限范围」里加一行：
+
+   ```
+   profile
+   ```
+
+5. 勾选启用与「需要 PKCE」，保存。
+6. 点该应用的「轮换 Secret」，把新生成的值填进服务端
+   `SWOJ_OAUTH_SECRET`，重启服务。
+
+注意：白名单按精确字符串比对，协议、域名、端口、路径任一不同都算未注册；
+地址里**不要带末尾斜杠**。授权页需要先登录 Campux 账号才能点「同意授权」，
+未登录时授权接口直接返回 `401 请先登录`。
+
+回调地址的协议、域名、路径必须与 `SWOJ_HOST` 完全一致。
 生产环境 `SWOJ_HOST=https://oj.example.com` 时，登记
 `https://oj.example.com/auth/campux/callback`。
 
@@ -172,6 +197,11 @@ curl -s -c /tmp/c.txt -o /dev/null -w '%{redirect_url}\n' \
 Mock 模式（`SWOJ_OAUTH_MOCK=1`）跳过真实回调，但 `OAuthEnabled()` 仍要求
 `SWOJ_OAUTH_SECRET` 非空；本地联调填任意占位值即可，
 不要把它填成真实 Secret。
+
+Campux 对 `/oauth/*` 全部 308 强制跳转 https。代码默认
+`SWOJ_OAUTH_BASE` 已是 `https://kg.campux.top`；token 交换用的
+`http.Client` 会跟随 308 并在 POST 上保留方法，因此即使误配成 http
+也只是多跳一次，不会导致授权失败。
 
 ## 7. 首次启动
 
