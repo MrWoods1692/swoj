@@ -227,7 +227,7 @@ const oauthCallbackPath = "/auth/campux/callback"
 // loadOAuthConfig 从环境变量读取 Campux OAuth 接入参数，未设置时用默认值。
 // 密钥建议只放服务端环境变量，不要提交进代码仓库。
 func loadOAuthConfig() OAuthConfig {
-	base := envStr("SWOJ_OAUTH_BASE", "http://kg.campux.top")
+	base := envStr("SWOJ_OAUTH_BASE", "https://kg.campux.top")
 	base = strings.TrimRight(base, "/")
 	c := OAuthConfig{
 		BaseURL:     base,
