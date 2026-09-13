@@ -142,7 +142,15 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if stored == nil || q.Get("state") == "" || stored.Value != q.Get("state") {
-		Fail(w, http.StatusBadRequest, "登录状态已失效，请重新授权")
+		// 三条分支的文案分开写：这个分支不会出现在前端任何页面上，
+		// 只会在登录跳回时直出 JSON，必须能自己说明下一步怎么做。
+		if stored == nil {
+			Fail(w, http.StatusBadRequest,
+				"未找到授权凭证，请回到本站首页重新点击「校园墙登录」")
+			return
+		}
+		Fail(w, http.StatusBadRequest,
+			"授权状态已过期或与当前页面不一致，请刷新页面后重新授权")
 		return
 	}
 	if stored != nil {
