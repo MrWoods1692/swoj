@@ -6,7 +6,7 @@ const props = defineProps({ id: String })
 const data = ref(null)
 const missing = ref(false)
 const saving = ref(false)
-const form = ref({ realname: '', school: '', avatar: '', signature: '', website: '', background: '', qq: '' })
+const form = ref({ realname: '', school: '', signature: '', website: '', background: '', qq: '' })
 
 const isMe = computed(() => auth.user && (!props.id || String(auth.user.id) === String(props.id)))
 
@@ -18,7 +18,7 @@ const load = async () => {
   if (data.value) {
     form.value = {
       realname: data.value.user.realname || '', school: data.value.user.school || '',
-      avatar: data.value.user.avatar || '', signature: data.value.user.signature || '',
+      signature: data.value.user.signature || '',
       website: data.value.user.website || '', background: data.value.user.background || '',
       qq: data.value.user.qq || '',
     }
@@ -135,7 +135,6 @@ const heatColor = ['var(--heat-0)', 'var(--heat-1)', 'var(--heat-2)', 'var(--hea
       <div class="grid grid--2">
         <label class="fld"><span>真实姓名</span><input v-model="form.realname" /></label>
         <label class="fld"><span>学校 / 学院</span><input v-model="form.school" /></label>
-        <label class="fld"><span>头像 URL</span><input v-model="form.avatar" /></label>
         <label class="fld"><span>QQ 号</span><input v-model="form.qq" /></label>
         <label class="fld"><span>个人网站</span><input v-model="form.website" placeholder="https://" /></label>
         <label class="fld"><span>背景图 URL</span><input v-model="form.background" placeholder="https://" /></label>

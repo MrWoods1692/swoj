@@ -135,7 +135,7 @@ var AchievementList = []AchievementDef{
 		Unlock: func(s *achStats) bool { return s.MaxDailyOnline >= 6*3600 }},
 	{Code: "training_done", Name: "完成训练计划", Desc: "完成一次训练计划单", Icon: "✅",
 		Unlock: func(s *achStats) bool { return s.TrainingDone }},
-	{Code: "profile_full", Name: "个性主页", Desc: "完善个人主页（真实姓名、头像、简介）", Icon: "🌟",
+	{Code: "profile_full", Name: "个性主页", Desc: "完善个人主页（真实姓名、QQ 号、简介）", Icon: "🌟",
 		Unlock: func(s *achStats) bool { return s.ProfileFull }},
 }
 
@@ -188,10 +188,11 @@ func dbAchStats(db *DB, userID int64) (*achStats, error) {
 		st.RegSeconds = int(time.Since(createdAt).Seconds())
 	}
 
-	var realname, avatar, signature string
-	_ = db.QueryRow(`SELECT COALESCE(realname,''), COALESCE(avatar,''), COALESCE(signature,'') FROM users WHERE id=?`,
-		userID).Scan(&realname, &avatar, &signature)
-	st.ProfileFull = strings.TrimSpace(realname) != "" && strings.TrimSpace(avatar) != "" &&
+	var realname, qq, signature string
+	_ = db.QueryRow(`SELECT COALESCE(realname,''), COALESCE(qq,''), COALESCE(signature,'') FROM users WHERE id=?`,
+		userID).Scan(&realname, &qq, &signature)
+	// 头像禁止手动填写、改由 QQ 自动派生，因此「头像已设置」等价于 QQ 号有效。
+	st.ProfileFull = strings.TrimSpace(realname) != "" && qqAvatarURL(qq) != "" &&
 		strings.TrimSpace(signature) != ""
 	return st, nil
 }
@@ -368,9 +369,11 @@ func (s *Server) profileUpdate(w http.ResponseWriter, r *http.Request) {
 		sets = append(sets, "school=?")
 		args = append(args, strings.TrimSpace(*req.School))
 	}
+	// 头像由平台按 QQ 自动派生（见 handler_profile.go 的 qqAvatarURL 回退），
+	// 不允许用户手动覆盖，否则会出现外链失效或指向无关图片。
 	if req.Avatar != nil {
-		sets = append(sets, "avatar=?")
-		args = append(args, strings.TrimSpace(*req.Avatar))
+		Fail(w, http.StatusBadRequest, "头像由系统自动生成，不可修改")
+		return
 	}
 	if req.Signature != nil {
 		sets = append(sets, "signature=?")
@@ -414,13 +417,14 @@ func (s *Server) profileUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// 姓名与个人主页补全后，才算完成注册：解锁提交权限。
-	var realname, avatar, signature string
-	if err := s.db.QueryRow(`SELECT COALESCE(realname,''), COALESCE(avatar,''), COALESCE(signature,'')
-		FROM users WHERE id=?`, claims.UserID).Scan(&realname, &avatar, &signature); err != nil {
+	var realname, qq, signature string
+	if err := s.db.QueryRow(`SELECT COALESCE(realname,''), COALESCE(qq,''), COALESCE(signature,'')
+		FROM users WHERE id=?`, claims.UserID).Scan(&realname, &qq, &signature); err != nil {
 		Fail(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if realname != "" && strings.TrimSpace(avatar) != "" && strings.TrimSpace(signature) != "" {
+	// 头像由 QQ 派生，判定时改用 QQ 有效性，否则禁止改头像后提交权限永远无法解锁。
+	if realname != "" && qqAvatarURL(qq) != "" && strings.TrimSpace(signature) != "" {
 		_, _ = s.db.Exec(`UPDATE users SET can_submit=1 WHERE id=?`, claims.UserID)
 	}
 	s.refreshAchievements(claims.UserID)
